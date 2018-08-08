@@ -39,9 +39,9 @@
 #include "hash-ops.h"
 #include "oaes_lib.h"
 
-#define MEMORY         (1 << 20) // 2MB scratchpad
-#define ITER           0x40000
-#define MASK 			0xFFFF0
+#define MEMORY         (1 << 19) // 0.5MB scratchpad
+#define ITER           0x30000
+#define MASK 			0x40000
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
 #define INIT_SIZE_BLK   8
