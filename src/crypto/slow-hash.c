@@ -39,9 +39,9 @@
 #include "hash-ops.h"
 #include "oaes_lib.h"
 
-#define MEMORY         (1 << 19) // 0.5MB scratchpad
-#define ITER           0x30000
-#define MASK 			0x40000
+#define MEMORY         (1 << 20) // 1MB scratchpad
+#define ITER           0x40000
+//#define MASK
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
 #define INIT_SIZE_BLK   8
@@ -1160,7 +1160,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 
     for(i = 0; i < ITER / 2; i++)
     {
-      //#define MASK ((uint32_t)(((MEMORY / AES_BLOCK_SIZE) - 1) << 4))
+      #define MASK ((uint32_t)(((MEMORY / AES_BLOCK_SIZE) - 1) << 4))
       #define state_index(x) ((*(uint32_t *) x) & MASK)
 
       // Iteration 1
