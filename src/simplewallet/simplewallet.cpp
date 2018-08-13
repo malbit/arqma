@@ -3897,7 +3897,7 @@ bool simple_wallet::refresh_main(uint64_t start_height, bool reset, bool is_init
     bool use_opt_height_old = m_wallet->explicit_refresh_from_block_height();
 		// force wallet to use explicit_refresh
 		m_wallet->explicit_refresh_from_block_height(use_optimized_height);
-    m_wallet->refresh(start_height, fetched_blocks);
+    m_wallet->refresh(is_daemon_trusted(), start_height, fetched_blocks);
     // restore previous value
 		m_wallet->explicit_refresh_from_block_height(use_opt_height_old);
 
@@ -6452,7 +6452,7 @@ void simple_wallet::wallet_idle_thread()
       {
         uint64_t fetched_blocks;
         if (try_connect_to_daemon(true))
-          m_wallet->refresh(0, fetched_blocks);
+          m_wallet->refresh(is_daemon_trusted(), 0, fetched_blocks);
       }
       catch(...) {}
       m_auto_refresh_refreshing = false;
