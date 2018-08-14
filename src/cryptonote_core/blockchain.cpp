@@ -2193,7 +2193,7 @@ bool Blockchain::get_transactions(const t_ids_container& txs_ids, t_tx_container
 // Find the split point between us and foreign blockchain and return
 // (by reference) the most recent common block hash along with up to
 // BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT additional (more recent) hashes.
-bool Blockchain::find_blockchain_supplement(const std::vector<crypto::hash>& qblock_ids, std::vector<crypto::hash>& hashes, uint64_t& start_height, uint64_t& current_height) const
+bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, std::vector<crypto::hash>& hashes, uint64_t& start_height, uint64_t& current_height) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
