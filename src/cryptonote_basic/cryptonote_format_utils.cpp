@@ -993,10 +993,10 @@ namespace cryptonote
     blobdata bd = get_block_hashing_blob(b);
 	
 	int cn_variant;
-    if(b.major_version >= 7) {
-      cn_variant = 1;
+    if(b.major_version >= 10) {
+      cn_variant = 2;
 	} else {
-	  cn_variant = 0;
+	  cn_variant = 1;
 	}
 	
     //const int cn_variant = b.major_version >= 7 ? b.major_version - 6 : 0;
