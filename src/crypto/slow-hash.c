@@ -906,6 +906,25 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
 	}
 }
 
+STATIC INLINE void* aligned_malloc(size_t size, size_t align)
+{
+    void *result;
+#ifdef _MSC_VER
+    result = _aligned_malloc(size, align);
+#else
+    if(posix_memalign(&result, align, size)) result = NULL;
+#endif
+    return result;
+}
+ STATIC INLINE void aligned_free(void *ptr)
+{
+#ifdef _MSC_VER
+    _aligned_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+
 void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed)
 {
     RDATA_ALIGN16 uint8_t expandedKey[240];
@@ -913,8 +932,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
     RDATA_ALIGN16 uint8_t hp_state[MEMORY];
 #else
-    RDATA_ALIGN16 uint8_t *hp_state = NULL;
-    hp_state = (uint8_t *)malloc(MEMORY);
+    uint8_t *hp_state = (uint8_t *)aligned_malloc(16, MEMORY);
 #endif
 
     uint8_t text[INIT_SIZE_BYTE];
@@ -1002,7 +1020,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
     extra_hashes[state.hs.b[0] & 3](&state, 200, hash);
 	
 #ifdef FORCE_USE_HEAP
-    free(hp_state);
+    aligned_free(hp_state);
 #endif
 }
 #else /* aarch64 && crypto */
@@ -1138,8 +1156,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
     uint8_t long_state[MEMORY];
 #else
-    uint8_t *long_state = NULL;
-    long_state = (uint8_t *)malloc(MEMORY);
+    uint8_t *long_state = (uint8_t *)malloc(MEMORY);
 #endif
 
     if (prehashed) {
@@ -1308,8 +1325,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
   uint8_t long_state[MEMORY];
 #else
-  uint8_t *long_state = NULL;
-  long_state = (uint8_t *)malloc(MEMORY);
+  uint8_t *long_state = (uint8_t *)malloc(MEMORY);
 #endif
 
   union cn_slow_hash_state state;
