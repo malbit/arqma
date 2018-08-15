@@ -17,6 +17,9 @@ IF (NOT WIN32)
 
   FIND_PATH(PCSC_INCLUDE_DIR winscard.h
     HINTS
+    IF (WIN32)
+    ${MSYS2_FOLDER}/mingw64/x86_64-w64-mingw32/include
+    ENDIF (WIN32)
     /usr/include/PCSC
     ${PC_PCSC_INCLUDEDIR}
     ${PC_PCSC_INCLUDE_DIRS}
@@ -25,6 +28,9 @@ IF (NOT WIN32)
 
   FIND_LIBRARY(PCSC_LIBRARY NAMES pcsclite libpcsclite PCSC
     HINTS
+    IF (WIN32)
+    ${MSYS2_FOLDER}/mingw64/x86_64-w64-mingw32/lib
+    ENDIF (WIN32)
     ${PC_PCSC_LIBDIR}
     ${PC_PCSC_LIBRARY_DIRS}
     )
