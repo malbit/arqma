@@ -40,8 +40,8 @@
 #include "oaes_lib.h"
 
 #define MEMORY() (variant >= 2 ? (1 << 19) : (1 << 20)) // 0.5MB : 1MB scratchpad
-#define ITER() (variant >= 2 ? (0x30000 : 0x40000))
-//#define MASK
+#define ITER() (variant >= 2 ? 0x20000 : 0x40000)
+#define MASK() (variant >= 2 ? 0x80000 : 0xFFFF0)
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
 #define INIT_SIZE_BLK   8
@@ -1160,8 +1160,8 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 
     for(i = 0; i < ITER() / 2; i++)
     {
-      #define MASK ((uint32_t)(((MEMORY() / AES_BLOCK_SIZE) - 1) << 4))
-      #define state_index(x) ((*(uint32_t *) x) & MASK)
+      //#define MASK ((uint32_t)(((MEMORY() / AES_BLOCK_SIZE) - 1) << 4))
+      #define state_index(x) ((*(uint32_t *) x) & MASK())
 
       // Iteration 1
       p = &long_state[state_index(a)];
