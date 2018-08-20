@@ -1,7 +1,7 @@
 
 #!/bin/bash
 #
-#  -D BOOST_ROOT=/opt/android/boost_1_67_0
+#  -D BOOST_ROOT=/opt/android/boost_1_58_0
  set -e
  orig_path=$PATH
 base_dir=`pwd`
