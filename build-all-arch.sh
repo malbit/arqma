@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #
 #  -D BOOST_ROOT=/opt/android/boost_1_58_0
