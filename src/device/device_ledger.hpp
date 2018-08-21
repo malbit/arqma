@@ -37,8 +37,10 @@
 #include <winscard.h>
 #define MAX_ATR_SIZE 33
 #else
+#ifdef WITH_DEVICE_LEDGER
 #include <PCSC/winscard.h>
 #include <PCSC/wintypes.h>
+#endif
 #endif
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
