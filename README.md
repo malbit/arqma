@@ -260,7 +260,7 @@ application.
 	
     you should recieve output: 
     
-    	`gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 7.3.0`
+    	gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 7.3.0
 
 
 **Building**
