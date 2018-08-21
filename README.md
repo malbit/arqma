@@ -219,36 +219,59 @@ application.
 
 **Preparing the build environment**
 
-* Download and install the [MSYS2 installer](http://msys2.github.io), either the 64-bit or the 32-bit package, depending on your system.
-* Open the MSYS shell via the `MSYS2 Shell` shortcut
-* Update packages using pacman:  
+1. Download and install the [MSYS2 installer](http://msys2.github.io), either the 64-bit or the 32-bit package, depending on your system.
+
+2. Open the MSYS shell via the `MSYS2 MSYS` shortcut at Menu Start
+
+3. Update packages using pacman:  
 
         pacman -Syuu  
 
-* Exit the MSYS shell using Alt+F4  
+4. Exit the MSYS shell using Alt+F4 or by clicking X at top-right corner. It is Very Important to do not exit to shell!!.
 
-* Start MSYS2 MINGW64 either MSYS2 MINGW32 from Menu Start
+5. Start `MSYS2 MINGW64` either `MSYS2 MINGW32` from Menu Start
 
-* Update packages again using pacman:  
+6. Update packages again using pacman:  
 
         pacman -Syuu  
 
 
-* Install dependencies:
+7. Install dependencies:
 
     To build for 64-bit Windows:
 
-        pacman -S mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium
+        pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium
 
     To build for 32-bit Windows:
  
-        pacman -S mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium
+        pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium
 
-* Open the MingW shell via `MinGW-w64-Win64 Shell` shortcut on 64-bit Windows
-  or `MinGW-w64-Win64 Shell` shortcut on 32-bit Windows. Note that if you are
-  running 64-bit Windows, you will have both 64-bit and 32-bit MinGW shells.
+8. Exit Msys2
+
+9. Download MinGW-w64 GCC 7.3 posix from: ```https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z```
+
+10. Unpack `x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z` to some folder. You should have mingw64 output folder. Copy it over to msys64 instalation folder (default c:\msys64) and overwrite files if ask.
+
+11. Run `MSYS2 MINGW64` either `MSYS2 MINGW32` from Menu Start.
+
+12. To verify proper gcc compiler do:
+
+	`gcc --version`
+	
+    you should recieve output: 
+    
+    	`gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 7.3.0`
+
 
 **Building**
+
+* Download ArQmA with command:
+	
+	`git clone --recursive https://github.com/arqma/arqma`
+
+* Activate submodules:
+
+	`cd arqma && git submodule init && git submodule update`
 
 * If you are on a 64-bit system, run:
 
