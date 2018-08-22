@@ -9,7 +9,7 @@ RUN curl -s -O http://dl.google.com/android/android-sdk_r24.4.1-linux.tgz \
     && rm -f android-sdk_r24.4.1-linux.tgz
 
 ## INSTALL ANDROID NDK
-ENV ANDROID_NDK_REVISION 17b
+ENV ANDROID_NDK_REVISION 14
 RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
