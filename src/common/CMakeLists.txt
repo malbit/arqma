@@ -69,7 +69,7 @@ set(common_private_headers
   threadpool.h
   updates.h)
 
-if(NO ANDROID)
+if(NOT ANDROID)
 monero_private_headers(common
   ${common_private_headers})
 monero_add_library(common
