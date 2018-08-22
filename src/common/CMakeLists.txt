@@ -69,6 +69,7 @@ set(common_private_headers
   threadpool.h
   updates.h)
 
+if(NO ANDROID)
 monero_private_headers(common
   ${common_private_headers})
 monero_add_library(common
@@ -76,6 +77,15 @@ monero_add_library(common
   ${common_headers}
   ${common_private_headers}
   DEPENDS generate_translations_header)
+elseif()
+monero_private_headers(common
+  ${common_private_headers})
+monero_add_library(common
+  ${common_sources}
+  ${common_headers}
+  ${common_private_headers})
+endif()
+
 target_link_libraries(common
   PUBLIC
     cncrypto
