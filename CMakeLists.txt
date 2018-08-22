@@ -421,7 +421,7 @@ add_definition_if_function_found(strptime HAVE_STRPTIME)
 
 add_definitions(-DAUTO_INITIALIZE_EASYLOGGINGPP)
 
-if(NO ANDROID)
+if(NOT ANDROID)
    # Generate header for embedded translations
    include(ExternalProject)
    ExternalProject_Add(generate_translations_header
