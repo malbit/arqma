@@ -77,15 +77,6 @@ monero_add_library(common
   ${common_headers}
   ${common_private_headers}
   DEPENDS generate_translations_header)
-elseif()
-monero_private_headers(common
-  ${common_private_headers})
-monero_add_library(common
-  ${common_sources}
-  ${common_headers}
-  ${common_private_headers})
-endif()
-
 target_link_libraries(common
   PUBLIC
     cncrypto
@@ -100,6 +91,28 @@ target_link_libraries(common
   PRIVATE
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
+elseif()
+monero_private_headers(common
+  ${common_private_headers})
+monero_add_library(common
+  ${common_sources}
+  ${common_headers}
+  ${common_private_headers})
+target_link_libraries(common
+  PUBLIC
+    cncrypto
+    ${UNBOUND_LIBRARY}
+    ${LIBUNWIND_LIBRARIES}
+    ${Boost_DATE_TIME_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_CHRONO_LIBRARY}
+  PRIVATE
+    ${OPENSSL_LIBRARIES}
+    ${EXTRA_LIBRARIES})
+endif()
 
 #monero_install_headers(common
 #  ${common_headers})
