@@ -19,8 +19,8 @@ ENV ANDROID_SDK_ROOT ${WORKDIR}/android-sdk-linux
 ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ## INSTALL BOOST
-ENV BOOST_VERSION 1_67_0
-ENV BOOST_VERSION_DOT 1.67.0
+ENV BOOST_VERSION 1_62_0
+ENV BOOST_VERSION_DOT 1.62.0
 RUN curl -s -L -o  boost_${BOOST_VERSION}.tar.bz2 https://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION_DOT}/boost_${BOOST_VERSION}.tar.bz2/download \
     && tar -xvf boost_${BOOST_VERSION}.tar.bz2 \
     && rm -f /usr/boost_${BOOST_VERSION}.tar.bz2 \
@@ -30,7 +30,7 @@ RUN curl -s -L -o  boost_${BOOST_VERSION}.tar.bz2 https://sourceforge.net/projec
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
 RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
          --arch arm \
-         --api 24 \
+         --api 27 \
          --install-dir $TOOLCHAIN_DIR \
          --stl=libc++
 ENV PATH $TOOLCHAIN_DIR/arm-linux-androideabi/bin:$TOOLCHAIN_DIR/bin:$PATH
