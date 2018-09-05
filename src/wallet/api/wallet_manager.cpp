@@ -62,7 +62,7 @@ Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string
     WalletImpl * wallet = new WalletImpl(nettype);
     wallet->open(path, password);
     //Refresh addressBook
-    wallet->addressBook()->refresh(); 
+    wallet->addressBook()->refresh();
     return wallet;
 }
 
@@ -100,7 +100,7 @@ Wallet *WalletManagerImpl::recoveryWallet(const std::string &path,
 Wallet *WalletManagerImpl::createWalletFromKeys(const std::string &path,
                                                 const std::string &password,
                                                 const std::string &language,
-                                                NetworkType nettype, 
+                                                NetworkType nettype,
                                                 uint64_t restoreHeight,
                                                 const std::string &addressString,
                                                 const std::string &viewKeyString,
@@ -335,7 +335,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
     if (!tools::check_updates(software, buildtag, version, hash))
       return std::make_tuple(false, "", "", "", "");
 
-    if (tools::vercmp(version.c_str(), MONERO_VERSION) > 0)
+    if (tools::vercmp(version.c_str(), ARQMA_VERSION) > 0)
     {
       std::string user_url = tools::get_update_url(software, subdir, buildtag, version, true);
       std::string auto_url = tools::get_update_url(software, subdir, buildtag, version, false);
