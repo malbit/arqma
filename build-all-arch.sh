@@ -1,10 +1,7 @@
 #!/bin/bash
 #
-<<<<<<< HEAD
 #  -D BOOST_ROOT=/opt/android/boost_1_67_0
-=======
-#  -D BOOST_ROOT=/opt/android/boost_1_58_0
->>>>>>> origin/android-build
+
  set -e
  orig_path=$PATH
 base_dir=`pwd`
@@ -13,12 +10,9 @@ base_dir=`pwd`
 #archs=(x86)
  for arch in ${archs[@]}; do
 	ldflags=""
-<<<<<<< HEAD
     case ${arch} in
-=======
-    case arm in
->>>>>>> origin/android-build
-        "arm")
+
+"arm")
 			target_host=arm-linux-androideabi
 			ldflags="-march=armv7-a -Wl,--fix-cortex-a8"
 			xarch=armv7-a
@@ -45,13 +39,8 @@ base_dir=`pwd`
  	OUTPUT_DIR=$base_dir/build/$build_type.$arch
  	mkdir -p $OUTPUT_DIR
 	cd $OUTPUT_DIR
-<<<<<<< HEAD
  	PATH=/opt/android/tool/$arch/$target_host/bin:/opt/android/tool/$arch/bin:$PATH CC=clang CXX=clang++ cmake -D BUILD_GUI_DEPS=1 -D BUILD_TESTS=OFF -D ARCH="$xarch" -D STATIC=ON -D BUILD_64=$sixtyfour -D CMAKE_BUILD_TYPE=$build_type -D ANDROID=true -D BUILD_TAG="android" -D BOOST_ROOT=/opt/android/build/boost/$arch -D BOOST_LIBRARYDIR=/opt/android/build/boost/$arch/lib -D OPENSSL_INCLUDE_DIR=/opt/android/build/openssl/include OPENSSL_ROOT_DIR=/opt/android/build/openssl/$arch -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true ../..
 	make -j2 wallet_api
-=======
- 	PATH=/opt/android/toolchain-arm/arm-linux-androideabi/bin:/opt/android/toolchain-arm/bin:$PATH CC=clang CXX=clang++ cmake -D BUILD_GUI_DEPS=1 -D BUILD_TESTS=OFF -D ARCH="armv7-a" -D STATIC=ON -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D ANDROID=true -D BUILD_TAG="android" -D BOOST_ROOT=/opt/android/boost_1_68_0 -D BOOST_LIBRARYDIR=/opt/android/boost_1_68_0/android32/lib/ -D OPENSSL_INCLUDE_DIR=/opt/android/openssl/include OPENSSL_ROOT_DIR=/opt/android/openssl -D OPENSSL_CRYPTO_LIBRARY=/opt/android/openssl/lib/libcrypto.so -D OPENSSL_SSL_LIBRARY=/opt/android/openssl/lib/libssl.so -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true ../..
-	make -j4 wallet_api
->>>>>>> origin/android-build
 	find . -path ./lib -prune -o -name '*.a' -exec cp '{}' lib \;
      TARGET_LIB_DIR=/opt/android/build/arqma/$arch/lib
     rm -rf $TARGET_LIB_DIR
