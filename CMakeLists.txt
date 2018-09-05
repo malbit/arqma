@@ -422,7 +422,7 @@ if(STATIC AND NOT IOS)
   endif()
 endif()
 
-find_package(PCSC)
+find_package(HIDAPI)
 
 add_definition_if_library_exists(c memset_s "string.h" HAVE_MEMSET_S)
 add_definition_if_library_exists(c explicit_bzero "strings.h" HAVE_EXPLICIT_BZERO)
@@ -431,12 +431,17 @@ add_definition_if_function_found(strptime HAVE_STRPTIME)
 add_definitions(-DAUTO_INITIALIZE_EASYLOGGINGPP)
 
 # Generate header for embedded translations
-include(ExternalProject)
-ExternalProject_Add(generate_translations_header
+if(ANDROID)
+  add_subdirectory(translations)
+  include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
+else()
+  include(ExternalProject)
+  ExternalProject_Add(generate_translations_header
   SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/translations"
   BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/translations"
   INSTALL_COMMAND cmake -E echo "")
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
+  include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
+endif()
 
 add_subdirectory(external)
 
@@ -460,14 +465,14 @@ endif()
 include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
 
-# Final setup for libpcsc
-if (PCSC_FOUND)
-  message(STATUS "Using PCSC include dir at ${PCSC_INCLUDE_DIR}")
-  add_definitions(-DHAVE_PCSC)
-  include_directories(${PCSC_INCLUDE_DIR})
-  link_directories(${LIBPCSC_LIBRARY_DIRS})
-else (PCSC_FOUND)
-  message(STATUS "Could not find PCSC")
+# Final setup for hid
+if (HIDAPI_FOUND)
+  message(STATUS "Using HIDAPI include dir at ${HIDAPI_INCLUDE_DIR}")
+  add_definitions(-DHAVE_HIDAPI)
+  include_directories(${HIDAPI_INCLUDE_DIR})
+  link_directories(${LIBHIDAPI_LIBRARY_DIRS})
+else (HIDAPI_FOUND)
+  message(STATUS "Could not find HIDAPI")
 endif()
 
 if(MSVC)
@@ -831,6 +836,19 @@ endif()
 
 list(APPEND EXTRA_LIBRARIES ${CMAKE_DL_LIBS})
 
+if (HIDAPI_FOUND)
+  if (APPLE)
+    find_library(COREFOUNDATION CoreFoundation)
+    find_library(IOKIT IOKit)
+    list(APPEND EXTRA_LIBRARIES ${IOKIT})
+    list(APPEND EXTRA_LIBRARIES ${COREFOUNDATION})
+  endif()
+  if (WIN32)
+    list(APPEND EXTRA_LIBRARIES setupapi)
+  endif()
+endif()
+
+option(USE_READLINE "Build with GNU readline support." ON)
 if(USE_READLINE)
   find_package(Readline)
   if(READLINE_FOUND AND GNU_READLINE_FOUND)
@@ -845,6 +863,7 @@ endif()
 
 if(ANDROID)
   set(ATOMIC libatomic.a)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=user-defined-warnings")
 endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AND NOT FREEBSD)
   find_library(ATOMIC atomic)
