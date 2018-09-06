@@ -2075,6 +2075,10 @@ namespace cryptonote
   bool core_rpc_server::on_get_output_distribution(const COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request& req, COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response& res, epee::json_rpc::error& error_resp)
   {
     PERF_TIMER(on_get_output_distribution);
+    bool r;
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_OUTPUT_DISTRIBUTION>(invoke_http_mode::JON_RPC, "get_output_distribution", req, res, r))
+      return r;
+
     try
     {
       for (uint64_t amount: req.amounts)
@@ -2091,37 +2095,16 @@ namespace cryptonote
 
         if (d.cached && amount == 0 && d.cached_from == req.from_height && d.cached_to == req.to_height)
         {
-          res.distributions.push_back({amount, d.cached_start_height, d.cached_distribution, d.cached_base});
-          if (req.cumulative)
+          res.distributions.push_back({amount, d.cached_start_height, req.binary, d.cached_distribution, d.cached_base});
+          if (!req.cumulative)
           {
             auto &distribution = res.distributions.back().distribution;
-            distribution[0] += d.cached_base;
-            for (size_t n = 1; n < distribution.size(); ++n)
-              distribution[n] += distribution[n-1];
+            for (size_t n = distribution.size() - 1; n > 0; --n)
+              distribution[n] -= distribution[n-1];
+            distribution[0] -= d.cached_base;
           }
           continue;
         }
-
-        // this is a slow operation, so we have precomputed caches of common cases
-        bool found = false;
-        for (const auto &slot: get_output_distribution_cache)
-        {
-          if (slot.amount == amount && slot.from_height == req.from_height && slot.to_height == req.to_height)
-          {
-            res.distributions.push_back({amount, slot.start_height, slot.distribution, slot.base});
-            found = true;
-            if (req.cumulative)
-            {
-              auto &distribution = res.distributions.back().distribution;
-              distribution[0] += slot.base;
-              for (size_t n = 1; n < distribution.size(); ++n)
-                distribution[n] += distribution[n-1];
-            }
-            break;
-          }
-        }
-        if (found)
-          continue;
 
         std::vector<uint64_t> distribution;
         uint64_t start_height, base;
@@ -2148,11 +2131,11 @@ namespace cryptonote
           d.cached = true;
         }
 
-        if (req.cumulative)
+        if (!req.cumulative)
         {
-          distribution[0] += base;
-          for (size_t n = 1; n < distribution.size(); ++n)
-            distribution[n] += distribution[n-1];
+          for (size_t n = distribution.size() - 1; n > 0; --n)
+            distribution[n] -= distribution[n-1];
+          distribution[0] -= base;
         }
 
         res.distributions.push_back({amount, start_height, std::move(distribution), base});
