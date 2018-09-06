@@ -28,7 +28,7 @@
 
 #pragma once
 
-+#include <algorithm>
+#include <algorithm>
 
 namespace epee
 {
