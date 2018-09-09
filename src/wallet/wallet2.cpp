@@ -90,7 +90,7 @@ using namespace cryptonote;
 // arbitrary, used to generate different hashes from the same input
 #define CHACHA8_KEY_TAIL 0x8c
 
-#define UNSIGNED_TX_PREFIX "ArQmQ unsigned tx set\004"
+#define UNSIGNED_TX_PREFIX "ArQmA unsigned tx set\004"
 #define SIGNED_TX_PREFIX "ArQmA signed tx set\004"
 #define MULTISIG_UNSIGNED_TX_PREFIX "ArQmA multisig unsigned tx set\001"
 
@@ -109,6 +109,8 @@ using namespace cryptonote;
 #define KEY_IMAGE_EXPORT_FILE_MAGIC "ArQmA key image export\002"
 
 #define MULTISIG_EXPORT_FILE_MAGIC "ArQmA multisig export\001"
+
+#define OUTPUT_EXPORT_FILE_MAGIC "ArQmA output export\003"
 
 #define SEGREGATION_FORK_HEIGHT 3000
 #define TESTNET_SEGREGATION_FORK_HEIGHT 100
@@ -4720,7 +4722,7 @@ void wallet2::commit_tx(std::vector<pending_tx>& ptx_vector)
   }
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::save_tx(const std::vector<pending_tx>& ptx_vector, const std::string &filename) const
+std::string wallet2::dump_tx_to_str(const std::vector<pending_tx>& ptx_vector) const
 {
   LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
   unsigned_tx_set txs;
@@ -4742,11 +4744,29 @@ bool wallet2::save_tx(const std::vector<pending_tx>& ptx_vector, const std::stri
   }
   catch (...)
   {
-    return false;
+    return std::string();
   }
   LOG_PRINT_L2("Saving unsigned tx data: " << oss.str());
   std::string ciphertext = encrypt_with_view_secret_key(oss.str());
-  return epee::file_io_utils::save_string_to_file(filename, std::string(UNSIGNED_TX_PREFIX) + ciphertext);
+  return std::string(UNSIGNED_TX_PREFIX) + ciphertext;
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::save_tx(const std::vector<pending_tx>& ptx_vector, const std::string &filename) const
+{
+  LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
+  std::string ciphertext = dump_tx_to_str(ptx_vector);
+  if (ciphertext.empty())
+    return false;
+  return epee::file_io_utils::save_string_to_file(filename, ciphertext);
+}
+//----------------------------------------------------------------------------------------------------
+std::string wallet2::dump_tx_to_str(const std::vector<pending_tx> &ptx_vector) const
+{
+  LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
+  std::string ciphertext = save_tx(ptx_vector);
+  if (ciphertext.empty())
+    return false;
+  return epee::file_io_utils::save_string_to_file(filename, ciphertext);
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx_set &exported_txs) const
@@ -4764,10 +4784,17 @@ bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx
     LOG_PRINT_L0("Failed to load from " << unsigned_filename);
     return false;
   }
+
+  return parse_unsigned_tx_from_str(s, exported_txs);
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::parse_unsigned_tx_from_str(const std::string &unsigned_tx_st, unsigned_tx_set &exported_txs) const
+{
+  std::string s = unsigned_tx_st;
   const size_t magiclen = strlen(UNSIGNED_TX_PREFIX) - 1;
   if (strncmp(s.c_str(), UNSIGNED_TX_PREFIX, magiclen))
   {
-    LOG_PRINT_L0("Bad magic from " << unsigned_filename);
+    LOG_PRINT_L0("Bad magic from unsigned tx");
     return false;
   }
   s = s.substr(magiclen);
@@ -4783,7 +4810,7 @@ bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx
     }
     catch (...)
     {
-      LOG_PRINT_L0("Failed to parse data from " << unsigned_filename);
+      LOG_PRINT_L0("Failed to parse data from unsigned tx");
       return false;
     }
   }
@@ -4800,19 +4827,19 @@ bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx
       }
       catch (...)
       {
-        LOG_PRINT_L0("Failed to parse data from " << unsigned_filename);
+        LOG_PRINT_L0("Failed to parse data from unsigned tx");
         return false;
       }
     }
     catch (const std::exception &e)
     {
-      LOG_PRINT_L0("Failed to decrypt " << unsigned_filename << ": " << e.what());
+      LOG_PRINT_L0("Failed to decrypt unsigned tx: "  << e.what());
       return false;
     }
   }
   else
   {
-    LOG_PRINT_L0("Unsupported version in " << unsigned_filename);
+    LOG_PRINT_L0("Unsupported version in unsigned tx");
     return false;
   }
   LOG_PRINT_L1("Loaded tx unsigned data from binary: " << exported_txs.txes.size() << " transactions");
@@ -4820,7 +4847,7 @@ bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::sign_tx(const std::string &unsigned_filename, const std::string &signed_filename, std::vector<wallet2::pending_tx> &txs, std::function<bool(const unsigned_tx_set&)> accept_func, bool export_raw)
+/*bool wallet2::sign_tx(const std::string &unsigned_filename, const std::string &signed_filename, std::vector<wallet2::pending_tx> &txs, std::function<bool(const unsigned_tx_set&)> accept_func, bool export_raw)
 {
   unsigned_tx_set exported_txs;
   if(!load_unsigned_tx(unsigned_filename, exported_txs))
@@ -4832,15 +4859,13 @@ bool wallet2::sign_tx(const std::string &unsigned_filename, const std::string &s
     return false;
   }
   return sign_tx(exported_txs, signed_filename, txs, export_raw);
-}
-
+}*/
 //----------------------------------------------------------------------------------------------------
-bool wallet2::sign_tx(unsigned_tx_set &exported_txs, const std::string &signed_filename, std::vector<wallet2::pending_tx> &txs, bool export_raw)
+bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pending_tx> &txs, signed_tx_set &signed_txes)
 {
   import_outputs(exported_txs.transfers);
 
   // sign the transactions
-  signed_tx_set signed_txes;
   for (size_t n = 0; n < exported_txs.txes.size(); ++n)
   {
     tools::wallet2::tx_construction_data &sd = exported_txs.txes[n];
@@ -4901,19 +4926,20 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, const std::string &signed_f
     signed_txes.key_images[i] = m_transfers[i].m_key_image;
   }
 
-  // save as binary
-  std::ostringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
-  try
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::sign_tx(unsigned_tx_set &exported_txs, const std::string &signed_filename, std::vector<wallet2::pending_tx> &txs, bool export_raw)
+{
+  // sign the transactions
+  signed_tx_set signed_txes;
+  std::string ciphertext = sign_tx_dump_to_str(exported_txs, txs, signed_txes);
+  if (ciphertext.empty())
   {
-    ar << signed_txes;
-  }
-  catch(...)
-  {
+    LOG_PRINT_L0("Failed to sign unsigned_tx_set");
     return false;
   }
-  LOG_PRINT_L3("Saving signed tx data (with encryption): " << oss.str());
-  std::string ciphertext = encrypt_with_view_secret_key(oss.str());
+
   if (!epee::file_io_utils::save_string_to_file(signed_filename, ciphertext))
   {
     LOG_PRINT_L0("Failed to save file to " << signed_filename);
@@ -4936,27 +4962,42 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, const std::string &signed_f
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
+std::string wallet2::sign_tx_dump_to_str(unsigned_tx_set &exported_txs, std::vector<wallet2::pending_tx> &ptx, signed_tx_set &signed_txes)
 {
-  std::string s;
+  // sign the transactions
+  bool r = sign_tx(exported_txs, ptx, signed_txes);
+  if (!r)
+  {
+    LOG_PRINT_L0("Failed to sign unsigned_tx_set");
+    return std::string();
+  }
+
+   // save as binary
+  std::ostringstream oss;
+  boost::archive::portable_binary_oarchive ar(oss);
+  try
+  {
+    ar << signed_txes;
+  }
+  catch(...)
+  {
+    return std::string();
+  }
+  LOG_PRINT_L3("Saving signed tx data (with encryption): " << oss.str());
+  std::string ciphertext = encrypt_with_view_secret_key(oss.str());
+  return std::string(SIGNED_TX_PREFIX) + ciphertext;
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::parse_tx_from_str(const std::string &tx_s, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
+{
+  std::string s = tx_s;
   boost::system::error_code errcode;
   signed_tx_set signed_txs;
 
-  if (!boost::filesystem::exists(signed_filename, errcode))
-  {
-    LOG_PRINT_L0("File " << signed_filename << " does not exist: " << errcode);
-    return false;
-  }
-
-  if (!epee::file_io_utils::load_file_to_string(signed_filename.c_str(), s))
-  {
-    LOG_PRINT_L0("Failed to load from " << signed_filename);
-    return false;
-  }
   const size_t magiclen = strlen(SIGNED_TX_PREFIX) - 1;
-  if (strncmp(s.c_str(), SIGNED_TX_PREFIX, magiclen))
+  if (strncmp(tx_s.c_str(), SIGNED_TX_PREFIX, magiclen))
   {
-    LOG_PRINT_L0("Bad magic from " << signed_filename);
+    LOG_PRINT_L0("Bad magic from signed transaction");
     return false;
   }
   s = s.substr(magiclen);
@@ -4972,7 +5013,7 @@ bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wal
     }
     catch (...)
     {
-      LOG_PRINT_L0("Failed to parse data from " << signed_filename);
+      LOG_PRINT_L0("Failed to parse data from signed transaction");
       return false;
     }
   }
@@ -4989,23 +5030,23 @@ bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wal
       }
       catch (...)
       {
-        LOG_PRINT_L0("Failed to parse decrypted data from " << signed_filename);
+        LOG_PRINT_L0("Failed to parse decrypted data from signed transaction");
         return false;
       }
     }
     catch (const std::exception &e)
     {
-      LOG_PRINT_L0("Failed to decrypt " << signed_filename << ": " << e.what());
+      LOG_PRINT_L0("Failed to decrypt signed transaction: " << e.what());
       return false;
     }
   }
   else
   {
-    LOG_PRINT_L0("Unsupported version in " << signed_filename);
+    LOG_PRINT_L0("Unsupported version in signed transaction");
     return false;
   }
   LOG_PRINT_L0("Loaded signed tx data from binary: " << signed_txs.ptx.size() << " transactions");
-  for (auto &ptx: signed_txs.ptx) LOG_PRINT_L0(cryptonote::obj_to_json_str(ptx.tx));
+  for (auto &c_ptx: signed_txs.ptx) LOG_PRINT_L0(cryptonote::obj_to_json_str(c_ptx.tx));
 
   if (accept_func && !accept_func(signed_txs))
   {
@@ -5034,6 +5075,25 @@ bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wal
   ptx = signed_txs.ptx;
 
   return true;
+}//----------------------------------------------------------------------------------------------------
+bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
+{
+  std::string s;
+  boost::system::error_code errcode;
+  signed_tx_set signed_txs;
+
+   if (!boost::filesystem::exists(signed_filename, errcode))
+  {
+    LOG_PRINT_L0("File " << signed_filename << " does not exist: " << errcode);
+    return false;
+  }
+   if (!epee::file_io_utils::load_file_to_string(signed_filename.c_str(), s))
+  {
+    LOG_PRINT_L0("Failed to load from " << signed_filename);
+    return false;
+  }
+
+   return this->load_tx_from_str(s, ptx, accept_func);
 }
 //----------------------------------------------------------------------------------------------------
 std::string wallet2::save_multisig_tx(multisig_tx_set txs)
@@ -9891,6 +9951,23 @@ std::vector<tools::wallet2::transfer_details> wallet2::export_outputs() const
   return outs;
 }
 //----------------------------------------------------------------------------------------------------
+std::string wallet2::export_outputs_to_str() const
+{
+  std::vector<tools::wallet2::transfer_details> outs = export_outputs();
+
+  std::stringstream oss;
+  boost::archive::portable_binary_oarchive ar(oss);
+  ar << outs;
+
+  std::string magic(OUTPUT_EXPORT_FILE_MAGIC, strlen(OUTPUT_EXPORT_FILE_MAGIC));
+  const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
+  std::string header;
+  header += std::string((const char *)&keys.m_spend_public_key, sizeof(crypto::public_key));
+  header += std::string((const char *)&keys.m_view_public_key, sizeof(crypto::public_key));
+  std::string ciphertext = encrypt_with_view_secret_key(header + oss.str());
+  return magic + ciphertext;
+}
+//----------------------------------------------------------------------------------------------------
 size_t wallet2::import_outputs(const std::vector<tools::wallet2::transfer_details> &outputs)
 {
   m_transfers.clear();
@@ -9921,6 +9998,67 @@ size_t wallet2::import_outputs(const std::vector<tools::wallet2::transfer_detail
   }
 
   return m_transfers.size();
+}
+//----------------------------------------------------------------------------------------------------
+size_t wallet2::import_outputs_from_str(const std::string &outputs_st)
+{
+  std::string data = outputs_st;
+  const size_t magiclen = strlen(OUTPUT_EXPORT_FILE_MAGIC);
+  if (data.size() < magiclen || memcmp(data.data(), OUTPUT_EXPORT_FILE_MAGIC, magiclen))
+  {
+    THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Bad magic from outputs"));
+  }
+
+  try
+  {
+    data = decrypt_with_view_secret_key(std::string(data, magiclen));
+  }
+  catch (const std::exception &e)
+  {
+    THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Failed to decrypt outputs: ") + e.what());
+  }
+
+  const size_t headerlen = 2 * sizeof(crypto::public_key);
+  if (data.size() < headerlen)
+  {
+    THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Bad data size for outputs"));
+  }
+  const crypto::public_key &public_spend_key = *(const crypto::public_key*)&data[0];
+  const crypto::public_key &public_view_key = *(const crypto::public_key*)&data[sizeof(crypto::public_key)];
+  const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
+  if (public_spend_key != keys.m_spend_public_key || public_view_key != keys.m_view_public_key)
+  {
+    THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Outputs from are for a different account"));
+  }
+
+  size_t imported_outputs = 0;
+  try
+  {
+    std::string body(data, headerlen);
+    std::stringstream iss;
+    iss << body;
+    std::vector<tools::wallet2::transfer_details> outputs;
+    try
+    {
+      boost::archive::portable_binary_iarchive ar(iss);
+      ar >> outputs;
+    }
+    catch (...)
+    {
+      iss.str("");
+      iss << body;
+      boost::archive::binary_iarchive ar(iss);
+      ar >> outputs;
+    }
+
+     imported_outputs = import_outputs(outputs);
+  }
+  catch (const std::exception &e)
+  {
+    THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Failed to import outputs") + e.what());
+  }
+
+   return imported_outputs;
 }
 //----------------------------------------------------------------------------------------------------
 crypto::public_key wallet2::get_multisig_signer_public_key(const crypto::secret_key &spend_skey) const
@@ -10287,7 +10425,7 @@ std::string wallet2::make_uri(const std::string &address, const std::string &pay
     }
   }
 
-  std::string uri = "arqma:" + address;
+  std::string uri = "arq:" + address;
   unsigned int n_fields = 0;
 
   if (!payment_id.empty())
@@ -10316,9 +10454,9 @@ std::string wallet2::make_uri(const std::string &address, const std::string &pay
 //----------------------------------------------------------------------------------------------------
 bool wallet2::parse_uri(const std::string &uri, std::string &address, std::string &payment_id, uint64_t &amount, std::string &tx_description, std::string &recipient_name, std::vector<std::string> &unknown_parameters, std::string &error)
 {
-  if (uri.substr(0, 7) != "arqma:")
+  if (uri.substr(0, 7) != "arq:")
   {
-    error = std::string("URI has wrong scheme (expected \"arqma:\"): ") + uri;
+    error = std::string("URI has wrong scheme (expected \"arq:\"): ") + uri;
     return false;
   }
 
