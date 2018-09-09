@@ -2827,7 +2827,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     sig_index++;
   }
   if (tx.version == 1 && threads > 1)
-    waiter.wait(&tpool));
+    waiter.wait(&tpool);
 
   if (tx.version == 1)
   {
