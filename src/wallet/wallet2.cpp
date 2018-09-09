@@ -1042,7 +1042,23 @@ void wallet2::check_acc_out_precomp(const tx_out &o, const crypto::key_derivatio
   }
   tx_scan_info.error = false;
 }
+//----------------------------------------------------------------------------------------------------
+void wallet2::check_acc_out_precomp(const tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info) const
+{
+  if (!is_out_data || i >= is_out_data->received.size())
+    return check_acc_out_precomp(o, derivation, additional_derivations, i, tx_scan_info);
 
+  tx_scan_info.received = is_out_data->received[i];
+  if(tx_scan_info.received)
+  {
+    tx_scan_info.money_transfered = o.amount; // may be 0 for ringct outputs
+  }
+  else
+  {
+    tx_scan_info.money_transfered = 0;
+  }
+  tx_scan_info.error = false;
+}
 //----------------------------------------------------------------------------------------------------
 void wallet2::check_acc_out_precomp_once(const tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info, bool &already_seen) const
 {
