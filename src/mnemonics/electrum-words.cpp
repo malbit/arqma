@@ -414,7 +414,7 @@ namespace crypto
       {
         return false;
       }
-      const std::vector<epee::wipeable_string> &word_list = language->get_word_list();
+      const std::vector<std::string> &word_list = language->get_word_list();
       // To store the words for random access to add the checksum word later.
       std::vector<epee::wipeable_string> words_store;
 
@@ -430,11 +430,11 @@ namespace crypto
         w[2] = ((w[0] / word_list_length) + w[1]) % word_list_length;
         w[3] = (((w[0] / word_list_length) / word_list_length) + w[2]) % word_list_length;
 
-        words += word_list[w[1];
+        words += word_list[w[1]];
         words += ' ';
-        words += word_list[w[2];
+        words += word_list[w[2]];
         words += ' ';
-        words += word_list[w[3];
+        words += word_list[w[3]];
 
         words_store.push_back(word_list[w[1]]);
         words_store.push_back(word_list[w[2]]);
@@ -446,7 +446,7 @@ namespace crypto
       return true;
     }
 
-    bool bytes_to_words(const crypto::secret_key& src, epee::wipeable_stringg& words,
+    bool bytes_to_words(const crypto::secret_key& src, epee::wipeable_string& words,
       const std::string &language_name)
     {
       return bytes_to_words(src.data, sizeof(src), words, language_name);
@@ -497,7 +497,7 @@ namespace crypto
       return word_list.size() != (seed_length + 1);
     }
 
-    std::string get_english_name_for(const epee::wipeable_string &name)
+    std::string get_english_name_for(const std::string &name)
     {
       const std::vector<const Language::Base*> language_instances = get_language_list();
       for (std::vector<const Language::Base*>::const_iterator it = language_instances.begin();
