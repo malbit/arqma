@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018, The Monero Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -28,43 +28,60 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <iosfwd>
-#include <string>
-
-#include "wipeable_string.h"
-#include "span.h"
+#include <map>
+#include <boost/thread/mutex.hpp>
 
 namespace epee
 {
-  struct to_hex
+  class mlocker
   {
-    //! \return A std::string containing hex of `src`.
-    static std::string string(const span<const std::uint8_t> src);
-    //! \return A epee::wipeable_string containing hex of `src`.
-    static epee::wipeable_string wipeable_string(const span<const std::uint8_t> src);
+  public:
+    mlocker(void *ptr, size_t len);
+    ~mlocker();
 
-    //! \return An array containing hex of `src`.
-    template<std::size_t N>
-    static std::array<char, N * 2> array(const std::array<std::uint8_t, N>& src) noexcept
-    {
-      std::array<char, N * 2> out{{}};
-      static_assert(N <= 128, "keep the stack size down");
-      buffer_unchecked(out.data(), {src.data(), src.size()});
-      return out;
-    }
+    static size_t get_page_size();
+    static size_t get_num_locked_pages();
+    static size_t get_num_locked_objects();
 
-    //! Append `src` as hex to `out`.
-    static void buffer(std::ostream& out, const span<const std::uint8_t> src);
-
-    //! Append `< + src + >` as hex to `out`.
-    static void formatted(std::ostream& out, const span<const std::uint8_t> src);
+    static void lock(void *ptr, size_t len);
+    static void unlock(void *ptr, size_t len);
 
   private:
-    template<typename T> T static convert(const span<const std::uint8_t> src);
+    static size_t page_size;
+    static size_t num_locked_objects;
 
-    //! Write `src` bytes as hex to `out`. `out` must be twice the length
-    static void buffer_unchecked(char* out, const span<const std::uint8_t> src) noexcept;
+    static boost::mutex &mutex();
+    static std::map<size_t, unsigned int> &map();
+    static void lock_page(size_t page);
+    static void unlock_page(size_t page);
+
+    void *ptr;
+    size_t len;
   };
+
+  /// Locks memory while in scope
+  ///
+  /// Primarily useful for making sure that private keys don't get swapped out
+  //  to disk
+  template <class T>
+  struct mlocked : public T {
+    using type = T;
+
+    mlocked(): T() { mlocker::lock(this, sizeof(T)); }
+    mlocked(const T &t): T(t) { mlocker::lock(this, sizeof(T)); }
+    mlocked(const mlocked<T> &mt): T(mt) { mlocker::lock(this, sizeof(T)); }
+    mlocked(const T &&t): T(t) { mlocker::lock(this, sizeof(T)); }
+    mlocked(const mlocked<T> &&mt): T(mt) { mlocker::lock(this, sizeof(T)); }
+    mlocked<T> &operator=(const mlocked<T> &mt) { T::operator=(mt); return *this; }
+    ~mlocked() { mlocker::unlock(this, sizeof(T)); }
+  };
+
+  template<typename T>
+  T& unwrap(mlocked<T>& src) { return src; }
+
+  template<typename T>
+  const T& unwrap(mlocked<T> const& src) { return src; }
+
+  template <class T, size_t N>
+  using mlocked_arr = mlocked<std::array<T, N>>;
 }

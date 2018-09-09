@@ -70,7 +70,7 @@ DISABLE_VS_WARNINGS(4244 4345)
     tools::scrubbed_arr<char, sizeof(base_key)+1> data;
     memcpy(data.data(), &base_key, sizeof(base_key));
     data[sizeof(base_key)] = KEYS_ENCRYPTION_SALT;
-    crypto::generate_chacha_key(data.data(), sizeof(data), key, 1);
+    crypto::generate_chacha_key(data.data(), sizeof(data), key);
   }
   //-----------------------------------------------------------------
   static epee::wipeable_string get_key_stream(const crypto::chacha_key &base_key, const crypto::chacha_iv &iv, size_t bytes)
@@ -223,7 +223,7 @@ DISABLE_VS_WARNINGS(4244 4345)
   void account_base::create_from_viewkey(const cryptonote::account_public_address& address, const crypto::secret_key& viewkey)
   {
     crypto::secret_key fake;
-    memset(&unwrap(fake), 0, sizeof(fake));
+    memset(&unwrap(unwrap(fake)), 0, sizeof(fake));
     create_from_keys(address, fake, viewkey);
   }
   //-----------------------------------------------------------------
