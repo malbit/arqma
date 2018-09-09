@@ -150,7 +150,7 @@ public:
     virtual UnsignedTransaction * loadUnsignedTx(const std::string &unsigned_filename) override;
     bool exportKeyImages(const std::string &filename) override;
     bool importKeyImages(const std::string &filename) override;
-    
+
     virtual void disposeTransaction(PendingTransaction * t) override;
     virtual TransactionHistory * history() override;
     virtual AddressBook * addressBook() override;
@@ -187,6 +187,9 @@ public:
     virtual void segregatePreForkOutputs(bool segregate) override;
     virtual void segregationHeight(uint64_t height) override;
     virtual void keyReuseMitigation2(bool mitigation) override;
+    virtual bool lockKeysFile() override;
+    virtual bool unlockKeysFile() override;
+    virtual bool isKeysFileLocked() override;
 
 private:
     void clearStatus() const;

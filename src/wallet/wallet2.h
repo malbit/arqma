@@ -774,6 +774,9 @@ namespace tools
     void rescan_blockchain(bool refresh = true);
     bool is_transfer_unlocked(const transfer_details& td) const;
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height) const;
+
+    uint64_t get_last_block_reward() const { return m_last_block_reward; }
+
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
     {
@@ -875,6 +878,9 @@ namespace tools
       if(ver < 24)
         return;
       a & m_ring_history_saved;
+      if(ver < 25)
+        return;
+      a & m_last_block_reward;
     }
 
     /*!
@@ -1179,7 +1185,7 @@ namespace tools
     bool clear();
     void pull_blocks(uint64_t start_height, uint64_t& blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::block_output_indices> &o_indices);
     void pull_hashes(uint64_t start_height, uint64_t& blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<crypto::hash> &hashes);
-    void fast_refresh(uint64_t stop_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history);
+    void fast_refresh(uint64_t stop_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history, bool force = false);
     void pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history, const std::vector<cryptonote::block_complete_entry> &prev_blocks, const std::vector<parsed_block> &prev_parsed_blocks, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<parsed_block> &parsed_blocks, bool &error);
     void process_parsed_blocks(uint64_t start_height, const std::vector<cryptonote::block_complete_entry> &blocks, const std::vector<parsed_block> &parsed_blocks, uint64_t& blocks_added);
     uint64_t select_transfers(uint64_t needed_money, std::vector<size_t> unused_transfers_indices, std::vector<size_t>& selected_transfers, bool trusted_daemon) const;
@@ -1319,6 +1325,7 @@ namespace tools
     std::unique_ptr<ringdb> m_ringdb;
 
     uint64_t m_last_block_reward;
+    std::unique_ptr<tools::file_locker> m_keys_file_locker;
 
     crypto::chacha_key m_cache_key;
     boost::optional<epee::wipeable_string> m_encrypt_keys_after_refresh;
