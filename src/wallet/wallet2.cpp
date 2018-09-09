@@ -5083,6 +5083,15 @@ void wallet2::commit_tx(std::vector<pending_tx>& ptx_vector)
   }
 }
 //----------------------------------------------------------------------------------------------------
+bool wallet2::save_tx(const std::vector<pending_tx>& ptx_vector, const std::string &filename) const
+{
+  LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
+  std::string ciphertext = dump_tx_to_str(ptx_vector);
+  if (ciphertext.empty())
+    return false;
+  return epee::file_io_utils::save_string_to_file(filename, ciphertext);
+}
+//----------------------------------------------------------------------------------------------------
 std::string wallet2::dump_tx_to_str(const std::vector<pending_tx>& ptx_vector) const
 {
   LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
@@ -5110,24 +5119,6 @@ std::string wallet2::dump_tx_to_str(const std::vector<pending_tx>& ptx_vector) c
   LOG_PRINT_L2("Saving unsigned tx data: " << oss.str());
   std::string ciphertext = encrypt_with_view_secret_key(oss.str());
   return std::string(UNSIGNED_TX_PREFIX) + ciphertext;
-}
-//----------------------------------------------------------------------------------------------------
-bool wallet2::save_tx(const std::vector<pending_tx>& ptx_vector, const std::string &filename) const
-{
-  LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
-  std::string ciphertext = dump_tx_to_str(ptx_vector);
-  if (ciphertext.empty())
-    return false;
-  return epee::file_io_utils::save_string_to_file(filename, ciphertext);
-}
-//----------------------------------------------------------------------------------------------------
-std::string wallet2::dump_tx_to_str(const std::vector<pending_tx> &ptx_vector) const
-{
-  LOG_PRINT_L0("saving " << ptx_vector.size() << " transactions");
-  std::string ciphertext = save_tx(ptx_vector);
-  if (ciphertext.empty())
-    return false;
-  return epee::file_io_utils::save_string_to_file(filename, ciphertext);
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx_set &exported_txs) const
@@ -5349,6 +5340,26 @@ std::string wallet2::sign_tx_dump_to_str(unsigned_tx_set &exported_txs, std::vec
   return std::string(SIGNED_TX_PREFIX) + ciphertext;
 }
 //----------------------------------------------------------------------------------------------------
+bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
+{
+  std::string s;
+  boost::system::error_code errcode;
+  signed_tx_set signed_txs;
+
+   if (!boost::filesystem::exists(signed_filename, errcode))
+  {
+    LOG_PRINT_L0("File " << signed_filename << " does not exist: " << errcode);
+    return false;
+  }
+   if (!epee::file_io_utils::load_file_to_string(signed_filename.c_str(), s))
+  {
+    LOG_PRINT_L0("Failed to load from " << signed_filename);
+    return false;
+  }
+
+   return this->parse_tx_from_str(s, ptx, accept_func);
+}
+//----------------------------------------------------------------------------------------------------
 bool wallet2::parse_tx_from_str(const std::string &tx_s, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
 {
   std::string s = tx_s;
@@ -5436,25 +5447,6 @@ bool wallet2::parse_tx_from_str(const std::string &tx_s, std::vector<tools::wall
   ptx = signed_txs.ptx;
 
   return true;
-}//----------------------------------------------------------------------------------------------------
-bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func)
-{
-  std::string s;
-  boost::system::error_code errcode;
-  signed_tx_set signed_txs;
-
-   if (!boost::filesystem::exists(signed_filename, errcode))
-  {
-    LOG_PRINT_L0("File " << signed_filename << " does not exist: " << errcode);
-    return false;
-  }
-   if (!epee::file_io_utils::load_file_to_string(signed_filename.c_str(), s))
-  {
-    LOG_PRINT_L0("Failed to load from " << signed_filename);
-    return false;
-  }
-
-   return this->load_tx_from_str(s, ptx, accept_func);
 }
 //----------------------------------------------------------------------------------------------------
 std::string wallet2::save_multisig_tx(multisig_tx_set txs)
