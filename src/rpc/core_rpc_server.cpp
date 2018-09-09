@@ -2138,7 +2138,7 @@ namespace cryptonote
           distribution[0] -= base;
         }
 
-        res.distributions.push_back({amount, start_height, std::move(distribution), base});
+        res.distributions.push_back({amount, start_height, req.binary, std::move(distribution), base});
       }
     }
     catch (const std::exception &e)
