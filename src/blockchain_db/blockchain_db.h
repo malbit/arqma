@@ -407,7 +407,7 @@ private:
   /**
    * @brief remove data about a transaction
    *
-   * The subclass implementing this will remove the transaction data 
+   * The subclass implementing this will remove the transaction data
    * for the passed transaction.  The data to be removed was added in
    * add_transaction_data().  Additionally, current subclasses have behavior
    * which requires the transaction itself as a parameter here.  Future
@@ -1247,18 +1247,7 @@ public:
    *
    * @return the requested output data
    */
-  virtual output_data_t get_output_key(const uint64_t& global_index) const = 0;
-
-  /**
-   * @brief gets an output's tx hash and index
-   *
-   * The subclass should return the hash of the transaction which created the
-   * output with the global index given, as well as its index in that transaction.
-   *
-   * @param index an output's global index
-   *
-   * @return the tx hash and output index
-   */
+  
   virtual tx_out_index get_output_tx_and_index_from_global(const uint64_t& index) const = 0;
 
   /**
@@ -1300,7 +1289,7 @@ public:
    * @param outputs return-by-reference a list of outputs' metadata
    */
   virtual void get_output_key(const uint64_t &amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, bool allow_partial = false) = 0;
-  
+
   /*
    * FIXME: Need to check with git blame and ask what this does to
    * document it
