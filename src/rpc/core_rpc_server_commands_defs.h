@@ -1152,6 +1152,31 @@ namespace cryptonote
     };
   };
 
+  struct COMMAND_RPC_GENERATEBLOCKS
+  {
+    struct request
+    {
+      uint64_t amount_of_blocks;
+      std::string wallet_address;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(amount_of_blocks)
+        KV_SERIALIZE(wallet_address)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      uint64_t height;
+      std::string status;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(height)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
   struct block_header_response
   {
       uint8_t major_version;
