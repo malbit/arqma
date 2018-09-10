@@ -2646,7 +2646,7 @@ void simple_wallet::print_seed(const epee::wipeable_string &seed)
       putchar(*ptr);
   }
   putchar('\n');
-  fflush(stdout)
+  fflush(stdout);
 }
 //----------------------------------------------------------------------------------------------------
 static bool might_be_partial_seed(const epee::wipeable_string &words)
@@ -3369,7 +3369,7 @@ boost::optional<tools::password_container> simple_wallet::get_and_verify_passwor
   return pwd_container;
 }
 //----------------------------------------------------------------------------------------------------
-boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
+boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
   const crypto::secret_key& recovery_key, bool recover, bool two_random, const std::string &old_language)
 {
   auto rc = tools::wallet2::make_new(vm, false, password_prompter);
@@ -3462,7 +3462,7 @@ boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boos
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
+boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
   const cryptonote::account_public_address& address, const boost::optional<crypto::secret_key>& spendkey,
   const crypto::secret_key& viewkey)
 {
@@ -3509,14 +3509,15 @@ boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boos
 }
 
 //----------------------------------------------------------------------------------------------------
-boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
+boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
                                const std::string &device_name) {
   auto rc = tools::wallet2::make_new(vm, false, password_prompter);
   m_wallet = std::move(rc.first);
   if (!m_wallet)
   {
-    return false;
+    return {};
   }
+  epee::wipeable_string password = rc.second.password();
 
   if (!m_subaddress_lookahead.empty())
   {
@@ -3543,15 +3544,16 @@ boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boos
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-boost::optional<epee::wipeable_string> bool simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
+boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
     const epee::wipeable_string &multisig_keys, const std::string &old_language)
 {
   auto rc = tools::wallet2::make_new(vm, false, password_prompter);
   m_wallet = std::move(rc.first);
   if (!m_wallet)
   {
-    return false;
+    return {};
   }
+  epee::wipeable_string password = rc.second.password();
 
   if (!m_subaddress_lookahead.empty())
   {
