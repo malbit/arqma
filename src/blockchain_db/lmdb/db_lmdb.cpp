@@ -2377,7 +2377,7 @@ uint64_t BlockchainLMDB::get_num_outputs(const uint64_t& amount) const
 }
 
 // This is a lot harder now that we've removed the output_keys index
-output_data_t BlockchainLMDB::get_output_key(const uint64_t &global_index) const
+/*output_data_t BlockchainLMDB::get_output_key(const uint64_t &global_index) const
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__ << " (unused version - does nothing)");
   check_open();
@@ -2424,7 +2424,7 @@ output_data_t BlockchainLMDB::get_output_key(const uint64_t &global_index) const
   TXN_POSTFIX_RDONLY();
   return od;
 }
-
+*/
 output_data_t BlockchainLMDB::get_output_key(const uint64_t& amount, const uint64_t& index)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
