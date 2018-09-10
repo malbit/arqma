@@ -75,6 +75,21 @@ namespace
     }
     return pwd_container;
   }
+  //------------------------------------------------------------------------------------------------------------------------------
+  void set_confirmations(tools::wallet_rpc::transfer_entry &entry, uint64_t blockchain_height, uint64_t block_reward)
+  {
+    if (entry.height >= blockchain_height)
+    {
+      entry.confirmations = 0;
+      entry.suggested_confirmations_threshold = 0;
+      return;
+    }
+    entry.confirmations = blockchain_height - entry.height;
+    if (block_reward == 0)
+      entry.suggested_confirmations_threshold = 0;
+    else
+      entry.suggested_confirmations_threshold = (entry.amount + block_reward - 1) / block_reward;
+  }
 }
 
 namespace tools
@@ -260,6 +275,7 @@ namespace tools
     entry.type = pd.m_coinbase ? "block" : "in";
     entry.subaddr_index = pd.m_subaddr_index;
     entry.address = m_wallet->get_subaddress_as_str(pd.m_subaddr_index);
+    set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::fill_transfer_entry(tools::wallet_rpc::transfer_entry &entry, const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd)
@@ -286,6 +302,7 @@ namespace tools
     entry.type = "out";
     entry.subaddr_index = { pd.m_subaddr_account, 0 };
     entry.address = m_wallet->get_subaddress_as_str({pd.m_subaddr_account, 0});
+    set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::fill_transfer_entry(tools::wallet_rpc::transfer_entry &entry, const crypto::hash &txid, const tools::wallet2::unconfirmed_transfer_details &pd)
@@ -305,6 +322,7 @@ namespace tools
     entry.type = is_failed ? "failed" : "pending";
     entry.subaddr_index = { pd.m_subaddr_account, 0 };
     entry.address = m_wallet->get_subaddress_as_str({pd.m_subaddr_account, 0});
+    set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::fill_transfer_entry(tools::wallet_rpc::transfer_entry &entry, const crypto::hash &payment_id, const tools::wallet2::pool_payment_details &ppd)
@@ -324,6 +342,7 @@ namespace tools
     entry.type = "pool";
     entry.subaddr_index = pd.m_subaddr_index;
     entry.address = m_wallet->get_subaddress_as_str(pd.m_subaddr_index);
+    set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_getbalance(const wallet_rpc::COMMAND_RPC_GET_BALANCE::request& req, wallet_rpc::COMMAND_RPC_GET_BALANCE::response& res, epee::json_rpc::error& er)
@@ -338,14 +357,20 @@ namespace tools
       std::map<uint32_t, uint64_t> unlocked_balance_per_subaddress = m_wallet->unlocked_balance_per_subaddress(req.account_index);
       std::vector<tools::wallet2::transfer_details> transfers;
       m_wallet->get_transfers(transfers);
-      for (const auto& i : balance_per_subaddress)
+      std::set<uint32_t> address_indices = req.address_indices;
+      if (address_indices.empty())
+      {
+        for (const auto& i : balance_per_subaddress)
+          address_indices.insert(i.first);
+      }
+      for (uint32_t i : address_indices)
       {
         wallet_rpc::COMMAND_RPC_GET_BALANCE::per_subaddress_info info;
-        info.address_index = i.first;
+        info.address_index = i;
         cryptonote::subaddress_index index = {req.account_index, info.address_index};
         info.address = m_wallet->get_subaddress_as_str(index);
-        info.balance = i.second;
-        info.unlocked_balance = unlocked_balance_per_subaddress[i.first];
+        info.balance = balance_per_subaddress[i];
+        info.unlocked_balance = unlocked_balance_per_subaddress[i];
         info.label = m_wallet->get_subaddress_label(index);
         info.num_unspent_outputs = std::count_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return !td.m_spent && td.m_subaddr_index == index; });
         res.per_subaddress.push_back(info);
@@ -910,7 +935,7 @@ namespace tools
         return false;
       }
 
-       res.signed_txset = epee::string_tools::buff_to_hex_nodelimer(ciphertext);
+      res.signed_txset = epee::string_tools::buff_to_hex_nodelimer(ciphertext);
     }
     catch (const std::exception &e)
     {
@@ -958,7 +983,8 @@ namespace tools
       er.message = "Failed to parse hex.";
       return false;
     }
-     std::vector<tools::wallet2::pending_tx> ptx_vector;
+
+    std::vector<tools::wallet2::pending_tx> ptx_vector;
     try
     {
       bool r = m_wallet->parse_tx_from_str(blob, ptx_vector, NULL);
@@ -1258,7 +1284,39 @@ namespace tools
         }
       }
 
-      res.integrated_address = m_wallet->get_integrated_address_as_str(payment_id);
+      if (req.standard_address.empty())
+      {
+        res.integrated_address = m_wallet->get_integrated_address_as_str(payment_id);
+      }
+      else
+      {
+        cryptonote::address_parse_info info;
+        if(!get_account_address_from_str(info, m_wallet->nettype(), req.standard_address))
+        {
+          er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+          er.message = "Invalid address";
+          return false;
+        }
+        if (info.is_subaddress)
+        {
+          er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+          er.message = "Subaddress shouldn't be used";
+          return false;
+        }
+        if (info.has_payment_id)
+        {
+          er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+          er.message = "Already integrated address";
+          return false;
+        }
+        if (req.payment_id.empty())
+        {
+          er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
+          er.message = "Payment ID shouldn't be left unspecified";
+          return false;
+        }
+        res.integrated_address = get_account_integrated_address_as_str(m_wallet->nettype(), info.address, payment_id);
+      }
       res.payment_id = epee::string_tools::pod_to_hex(payment_id);
       return true;
     }
@@ -2673,37 +2731,37 @@ namespace tools
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_change_wallet_password(const wallet_rpc::COMMAND_RPC_CHANGE_WALLET_PASSWORD::request& req, wallet_rpc::COMMAND_RPC_CHANGE_WALLET_PASSWORD::response& res, epee::json_rpc::error& er)
- {
-   if (!m_wallet) return not_open(er);
-   if (m_restricted)
-   {
-     er.code = WALLET_RPC_ERROR_CODE_DENIED;
-     er.message = "Command unavailable in restricted mode.";
-     return false;
-   }
-   if (m_wallet->verify_password(req.old_password))
-   {
-     try
-     {
-       m_wallet->rewrite(m_wallet->get_wallet_file(), req.new_password);
-       m_wallet->store();
-       LOG_PRINT_L0("Wallet password changed.");
-     }
-     catch (const std::exception& e)
-     {
-       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-       return false;
-     }
-   }
-   else
-   {
-     er.code = WALLET_RPC_ERROR_CODE_INVALID_PASSWORD;
-     er.message = "Invalid original password.";
-     return false;
-   }
-   return true;
- }
- //------------------------------------------------------------------------------------------------------------------------------
+  {
+    if (!m_wallet) return not_open(er);
+    if (m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Command unavailable in restricted mode.";
+      return false;
+    }
+    if (m_wallet->verify_password(req.old_password))
+    {
+      try
+      {
+        m_wallet->rewrite(m_wallet->get_wallet_file(), req.new_password);
+        m_wallet->store();
+        LOG_PRINT_L0("Wallet password changed.");
+      }
+      catch (const std::exception& e)
+      {
+        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+        return false;
+      }
+    }
+    else
+    {
+      er.code = WALLET_RPC_ERROR_CODE_INVALID_PASSWORD;
+      er.message = "Invalid original password.";
+      return false;
+    }
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::handle_rpc_exception(const std::exception_ptr& e, epee::json_rpc::error& er, int default_error_code) {
     try
     {

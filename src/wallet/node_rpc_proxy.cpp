@@ -128,7 +128,33 @@ boost::optional<std::string> NodeRPCProxy::get_target_height(uint64_t &height) c
     m_target_height = resp_t.target_height;
     m_target_height_time = now;
   }
+  return boost::optional<std::string>();
+}
+
+boost::optional<std::string> NodeRPCProxy::get_height(uint64_t &height) const
+{
+  auto res = get_info();
+  if (res)
+    return res;
+  height = m_height;
+  return boost::optional<std::string>();
+}
+
+boost::optional<std::string> NodeRPCProxy::get_target_height(uint64_t &height) const
+{
+  auto res = get_info();
+  if (res)
+    return res;
   height = m_target_height;
+  return boost::optional<std::string>();
+}
+
+boost::optional<std::string> NodeRPCProxy::get_block_size_limit(uint64_t &block_size_limit) const
+{
+  auto res = get_info();
+  if (res)
+    return res;
+  block_size_limit = m_block_size_limit;
   return boost::optional<std::string>();
 }
 

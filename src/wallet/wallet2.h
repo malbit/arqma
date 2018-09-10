@@ -349,7 +349,7 @@ namespace tools
         FIELD(extra)
         FIELD(unlock_time)
         FIELD(use_rct)
-	FIELD(use_bulletproofs)
+		FIELD(use_bulletproofs)
         FIELD(dests)
         FIELD(subaddr_account)
         FIELD(subaddr_indices)
@@ -501,7 +501,7 @@ namespace tools
      * \param  create_address_file  Whether to create an address file
      */
     void generate(const std::string& wallet_, const epee::wipeable_string& password,
-      const epee::wipeable_string& multisig_data, bool create_address_file = true);
+      const epee::wipeable_string& multisig_data, bool create_address_file = false);
 
     /*!
      * \brief Generates a wallet or restores one.
@@ -515,7 +515,7 @@ namespace tools
      */
     crypto::secret_key generate(const std::string& wallet, const epee::wipeable_string& password,
       const crypto::secret_key& recovery_param = crypto::secret_key(), bool recover = false,
-      bool two_random = false, bool create_address_file = true);
+      bool two_random = false, bool create_address_file = false);
     /*!
      * \brief Creates a wallet from a public address and a spend/view secret key pair.
      * \param  wallet_                 Name of wallet file
@@ -527,7 +527,7 @@ namespace tools
      */
     void generate(const std::string& wallet, const epee::wipeable_string& password,
       const cryptonote::account_public_address &account_public_address,
-      const crypto::secret_key& spendkey, const crypto::secret_key& viewkey, bool create_address_file = true);
+      const crypto::secret_key& spendkey, const crypto::secret_key& viewkey, bool create_address_file = false);
     /*!
      * \brief Creates a watch only wallet from a public address and a view secret key.
      * \param  wallet_                 Name of wallet file
@@ -538,7 +538,7 @@ namespace tools
      */
     void generate(const std::string& wallet, const epee::wipeable_string& password,
       const cryptonote::account_public_address &account_public_address,
-      const crypto::secret_key& viewkey = crypto::secret_key(), bool create_address_file = true);
+      const crypto::secret_key& viewkey = crypto::secret_key(), bool create_address_file = false);
     /*!
      * \brief Restore a wallet hold by an HW.
      * \param  wallet_        Name of wallet file
@@ -936,10 +936,13 @@ namespace tools
     void key_reuse_mitigation2(bool value) { m_key_reuse_mitigation2 = value; }
     uint64_t segregation_height() const { return m_segregation_height; }
     void segregation_height(uint64_t height) { m_segregation_height = height; }
+    bool ignore_fractional_outputs() const { return m_ignore_fractional_outputs; }
+    void ignore_fractional_outputs(bool value) { m_ignore_fractional_outputs = value; }
     bool confirm_non_default_ring_size() const { return m_confirm_non_default_ring_size; }
     void confirm_non_default_ring_size(bool always) { m_confirm_non_default_ring_size = always; }
 
     bool get_tx_key(const crypto::hash &txid, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys) const;
+    void set_tx_key(const crypto::hash &txid, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys);
     void check_tx_key(const crypto::hash &txid, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
     void check_tx_key_helper(const crypto::hash &txid, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
     std::string get_tx_proof(const crypto::hash &txid, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message);
@@ -1305,6 +1308,7 @@ namespace tools
     bool m_segregate_pre_fork_outputs;
     bool m_key_reuse_mitigation2;
     uint64_t m_segregation_height;
+    bool m_ignore_fractional_outputs;
     bool m_is_initialized;
     NodeRPCProxy m_node_rpc_proxy;
     std::unordered_set<crypto::hash> m_scanned_pool_txs[2];

@@ -359,7 +359,7 @@ POP_WARNINGS
     return hex_to_pod(hex_str, unwrap(s));
   }
   //----------------------------------------------------------------------------
-	template<class t_pod_type>
+  template<class t_pod_type>
   bool hex_to_pod(const std::string& hex_str, epee::mlocked<t_pod_type>& s)
   {
     return hex_to_pod(hex_str, unwrap(s));

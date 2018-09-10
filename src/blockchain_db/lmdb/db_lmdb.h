@@ -386,6 +386,9 @@ private:
   // migrate from DB version 1 to 2
   void migrate_1_2();
 
+  // migrate from DB version 2 to 3
+  void migrate_2_3();
+
   void cleanup_batch();
 
 private:

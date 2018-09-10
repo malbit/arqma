@@ -80,15 +80,15 @@ wipeable_string::wipeable_string(const char *s)
   memcpy(buffer.data(), s, size());
 }
 
-wipeable_string::~wipeable_string()
-{
-  wipe();
-}
-
 wipeable_string::wipeable_string(const char *s, size_t len)
 {
   grow(len);
   memcpy(buffer.data(), s, len);
+}
+
+wipeable_string::~wipeable_string()
+{
+  wipe();
 }
 
 void wipeable_string::wipe()
@@ -162,10 +162,12 @@ void wipeable_string::trim()
     ++prefix;
   if (prefix > 0)
     memmove(buffer.data(), buffer.data() + prefix, size() - prefix);
-   size_t suffix = 0;
+
+  size_t suffix = 0;
   while (suffix < size()-prefix && data()[size() - 1 - prefix - suffix] == ' ')
     ++suffix;
-   resize(size() - prefix - suffix);
+
+  resize(size() - prefix - suffix);
 }
 
 void wipeable_string::split(std::vector<wipeable_string> &fields) const

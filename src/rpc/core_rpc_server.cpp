@@ -568,7 +568,7 @@ namespace cryptonote
         // sort to match original request
         std::vector<transaction> sorted_txs;
         std::vector<tx_info>::const_iterator i;
-	unsigned txs_processed = 0;
+		unsigned txs_processed = 0;
         for (const crypto::hash &h: vh)
         {
           if (std::find(missed_txs.begin(), missed_txs.end(), h) == missed_txs.end())

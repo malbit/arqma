@@ -53,8 +53,8 @@ namespace Language
    * \param  count           How many characters to return.
    * \return                 A string consisting of the first count characters in s.
    */
-   template<typename T>
-   inline T utf8prefix(const T &s, size_t count)
+  template<typename T>
+  inline T utf8prefix(const T &s, size_t count)
   {
     T prefix = "";
     size_t avail = s.size();

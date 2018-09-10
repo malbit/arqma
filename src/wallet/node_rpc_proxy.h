@@ -51,6 +51,8 @@ public:
   boost::optional<std::string> get_dynamic_per_kb_fee_estimate(uint64_t grace_blocks, uint64_t &fee) const;
 
 private:
+  boost::optional<std::string> get_info() const;
+
   epee::net_utils::http::http_simple_client &m_http_client;
   boost::mutex &m_daemon_rpc_mutex;
 

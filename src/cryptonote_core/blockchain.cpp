@@ -323,6 +323,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   m_nettype = test_options != NULL ? FAKECHAIN : nettype;
   m_offline = offline;
+  m_fixed_difficulty = fixed_difficulty;
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
@@ -766,6 +767,11 @@ bool Blockchain::get_block_by_hash(const crypto::hash &h, block &blk, bool *orph
 // less blocks than desired if there aren't enough.
 difficulty_type Blockchain::get_difficulty_for_next_block()
 {
+  if (m_fixed_difficulty)
+  {
+    return m_db->height() ? m_fixed_difficulty : 1;
+  }
+
   LOG_PRINT_L3("Blockchain::" << __func__);
 
   crypto::hash top_hash = get_tail_id();
@@ -986,6 +992,11 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
 // an alternate chain.
 difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei) const
 {
+  if (m_fixed_difficulty)
+  {
+    return m_db->height() ? m_fixed_difficulty : 1;
+  }
+
   LOG_PRINT_L3("Blockchain::" << __func__);
   std::vector<uint64_t> timestamps;
   std::vector<difficulty_type> cumulative_difficulties;
@@ -2094,14 +2105,10 @@ bool Blockchain::get_blocks(const t_ids_container& block_ids, t_blocks_container
   {
     try
     {
-//      blocks.push_back(std::make_pair(m_db->get_block_blob(block_hash), block()));
-//      if (!parse_and_validate_block_from_blob(blocks.back().first, blocks.back().second))
-    uint64_t height = 0;
-    if (m_db->block_exists(block_hash, &height))
+      uint64_t height = 0;
+      if (m_db->block_exists(block_hash, &height))
       {
-//        LOG_ERROR("Invalid block");
-//        return false;
-	        blocks.push_back(std::make_pair(m_db->get_block_blob_from_height(height), block()));
+        blocks.push_back(std::make_pair(m_db->get_block_blob_from_height(height), block()));
         if (!parse_and_validate_block_from_blob(blocks.back().first, blocks.back().second))
         {
           LOG_ERROR("Invalid block: " << block_hash);
@@ -2109,12 +2116,8 @@ bool Blockchain::get_blocks(const t_ids_container& block_ids, t_blocks_container
           missed_bs.push_back(block_hash);
         }
       }
-//    }
-//    catch (const BLOCK_DNE& e)
-//    {
-//      missed_bs.push_back(block_hash);
       else
-	missed_bs.push_back(block_hash);
+        missed_bs.push_back(block_hash);
     }
     catch (const std::exception& e)
     {
@@ -2254,7 +2257,7 @@ bool Blockchain::find_blockchain_supplement(const uint64_t req_start_block, cons
   total_height = get_current_blockchain_height();
   size_t count = 0, size = 0;
   blocks.reserve(std::min(std::min(max_count, (size_t)10000), (size_t)(total_height - start_height)));
-  for(size_t i = start_height; i < total_height && count < max_count && (size < FIND_BLOCKCHAIN_SUPPLEMENT_MAX_SIZE || count < 3); i++, count++)
+  for(uint64_t i = start_height; i < total_height && count < max_count && (size < FIND_BLOCKCHAIN_SUPPLEMENT_MAX_SIZE || count < 3); i++, count++)
   {
     blocks.resize(blocks.size()+1);
     blocks.back().first.first = m_db->get_block_blob_from_height(i);
@@ -4090,7 +4093,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
           break;
         }
 
-        blocks[i].push_back(block);
+        blocks[i].push_back(std::move(block));
         std::advance(it, 1);
       }
     }
@@ -4111,7 +4114,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
         break;
       }
 
-      blocks[i].push_back(block);
+      blocks[i].push_back(std::move(block));
       std::advance(it, 1);
     }
 
@@ -4183,25 +4186,25 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     if (m_cancel)
       return false;
 
-      for (const auto &tx_blob : entry.txs)
-      {
-        if (tx_index >= txes.size())
-          SCAN_TABLE_QUIT("tx_index is out of sync");
-        transaction &tx = txes[tx_index].first;
-        crypto::hash &tx_prefix_hash = txes[tx_index].second;
-        ++tx_index;
+    for (const auto &tx_blob : entry.txs)
+    {
+      if (tx_index >= txes.size())
+        SCAN_TABLE_QUIT("tx_index is out of sync");
+      transaction &tx = txes[tx_index].first;
+      crypto::hash &tx_prefix_hash = txes[tx_index].second;
+      ++tx_index;
 
-        if (!parse_and_validate_tx_base_from_blob(tx_blob, tx))
-          SCAN_TABLE_QUIT("Could not parse tx from incoming blocks.");
-        cryptonote::get_transaction_prefix_hash(tx, tx_prefix_hash);
+      if (!parse_and_validate_tx_base_from_blob(tx_blob, tx))
+        SCAN_TABLE_QUIT("Could not parse tx from incoming blocks.");
+      cryptonote::get_transaction_prefix_hash(tx, tx_prefix_hash);
 
-        auto its = m_scan_table.find(tx_prefix_hash);
-        if (its != m_scan_table.end())
-          SCAN_TABLE_QUIT("Duplicate tx found from incoming blocks.");
+      auto its = m_scan_table.find(tx_prefix_hash);
+      if (its != m_scan_table.end())
+        SCAN_TABLE_QUIT("Duplicate tx found from incoming blocks.");
 
-        m_scan_table.emplace(tx_prefix_hash, std::unordered_map<crypto::key_image, std::vector<output_data_t>>());
-        its = m_scan_table.find(tx_prefix_hash);
-        assert(its != m_scan_table.end());
+      m_scan_table.emplace(tx_prefix_hash, std::unordered_map<crypto::key_image, std::vector<output_data_t>>());
+      its = m_scan_table.find(tx_prefix_hash);
+      assert(its != m_scan_table.end());
 
       // get all amounts from tx.vin(s)
       for (const auto &txin : tx.vin)
@@ -4460,9 +4463,9 @@ std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> Blockchain:: get_ou
   return m_db->get_output_histogram(amounts, unlocked, recent_cutoff, min_count);
 }
 
-std::list<std::pair<Blockchain::block_extended_info,uint64_t>> Blockchain::get_alternative_chains() const
+std::list<std::pair<Blockchain::block_extended_info,std::vector<crypto::hash>>> Blockchain::get_alternative_chains() const
 {
-  std::list<std::pair<Blockchain::block_extended_info,uint64_t>> chains;
+  std::list<std::pair<Blockchain::block_extended_info,std::vector<crypto::hash>>> chains;
 
   for (const auto &i: m_alternative_chains)
   {
@@ -4478,15 +4481,16 @@ std::list<std::pair<Blockchain::block_extended_info,uint64_t>> Blockchain::get_a
     }
     if (!found)
     {
-      uint64_t length = 1;
+      std::vector<crypto::hash> chain;
       auto h = i.second.bl.prev_id;
+      chain.push_back(top);
       blocks_ext_by_hash::const_iterator prev;
       while ((prev = m_alternative_chains.find(h)) != m_alternative_chains.end())
       {
+        chain.push_back(h);
         h = prev->second.bl.prev_id;
-        ++length;
       }
-      chains.push_back(std::make_pair(i.second, length));
+      chains.push_back(std::make_pair(i.second, chain));
     }
   }
   return chains;

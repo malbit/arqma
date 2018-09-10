@@ -124,7 +124,7 @@ namespace crypto
      * \param  name the name of the language in its own language
      * \return      the name of the language in English
      */
-    std::string get_english_name_for(const epee::wipeable_string &name);
+    std::string get_english_name_for(const std::string &name);
   }
 }
 

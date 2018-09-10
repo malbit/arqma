@@ -689,7 +689,7 @@ bool simple_wallet::print_seed(bool encrypted)
   epee::wipeable_string seed_pass;
   if (encrypted)
   {
-    auto pwd_container = password_prompter(tr("Enter optional seed encryption passphrase, empty to see raw seed"), true);
+    auto pwd_container = password_prompter(tr("Enter optional seed offset passphrase, empty to see raw seed"), true);
     if (std::cin.eof() || !pwd_container)
       return true;
     seed_pass = pwd_container->password();
@@ -1746,7 +1746,7 @@ bool simple_wallet::set_default_ring_size(const std::vector<std::string> &args/*
 
 bool simple_wallet::set_default_priority(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
-  int priority = 0;
+  uint32_t priority = 0;
   try
   {
     if (strchr(args[1].c_str(), '-'))
@@ -2066,6 +2066,18 @@ bool simple_wallet::set_segregation_height(const std::vector<std::string> &args/
   return true;
 }
 
+bool simple_wallet::set_ignore_fractional_outputs(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
+{
+  const auto pwd_container = get_and_verify_password();
+  if (pwd_container)
+  {
+    parse_bool_and_use(args[1], [&](bool r) {
+      m_wallet->ignore_fractional_outputs(r);
+      m_wallet->rewrite(m_wallet_file, pwd_container->password());
+    });
+  }
+  return true;
+}
 bool simple_wallet::help(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
   if(args.empty())
@@ -2123,10 +2135,10 @@ simple_wallet::simple_wallet()
                            tr("Show the blockchain height."));
   m_cmd_binder.set_handler("transfer_original",
                            boost::bind(&simple_wallet::transfer, this, _1),
-                           tr("transfer_original [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <amount>"),
+                           tr("transfer_original [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <amount> [<payment_id>]"),
                            tr("Transfer <amount> to <address> using an older transaction building algorithm. If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding <address_2> <amount_2> etcetera (before the payment ID, if it's included)"));
   m_cmd_binder.set_handler("transfer", boost::bind(&simple_wallet::transfer_new, this, _1),
-                           tr("transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <amount>"),
+                           tr("transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <amount> [<payment_id>]"),
                            tr("Transfer <amount> to <address>. If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding <address_2> <amount_2> etcetera (before the payment ID, if it's included)"));
   m_cmd_binder.set_handler("locked_transfer",
                            boost::bind(&simple_wallet::locked_transfer, this, _1),
@@ -2183,8 +2195,8 @@ simple_wallet::simple_wallet()
                            tr("If no arguments are specified or <index> is specified, the wallet shows the default or specified address. If \"all\" is specified, the wallet shows all the existing addresses in the currently selected account. If \"new \" is specified, the wallet creates a new address with the provided label text (which can be empty). If \"label\" is specified, the wallet sets the label of the address specified by <index> to the provided label text."));
   m_cmd_binder.set_handler("integrated_address",
                            boost::bind(&simple_wallet::print_integrated_address, this, _1),
-                           tr("integrated_address [<ID> | <address>]"),
-                           tr("Encode an ID into an integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID"));
+                           tr("integrated_address  [<payment_id> | <address>]"),
+                           tr("Encode an a payment ID into integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID"));
   m_cmd_binder.set_handler("address_book",
                            boost::bind(&simple_wallet::address_book, this, _1),
                            tr("address_book [(add ((<address> [pid <id>])|<integrated address>) [<description possibly with whitespaces>])|(delete <index>)]"),
@@ -2261,6 +2273,10 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::get_tx_key, this, _1),
                            tr("get_tx_key <txid>"),
                            tr("Get the transaction key (r) for a given <txid>."));
+  m_cmd_binder.set_handler("set_tx_key",
+                           boost::bind(&simple_wallet::set_tx_key, this, _1),
+                           tr("set_tx_key <txid> <tx_key>"),
+                           tr("Set the transaction key (r) for a given <txid> in case the tx was made by some other device or 3rd party wallet."));
   m_cmd_binder.set_handler("check_tx_key",
                            boost::bind(&simple_wallet::check_tx_key, this, _1),
                            tr("check_tx_key <txid> <txkey> <address>"),
@@ -2458,6 +2474,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     const std::pair<size_t, size_t> lookahead = m_wallet->get_subaddress_lookahead();
     success_msg_writer() << "subaddress-lookahead = " << lookahead.first << ":" << lookahead.second;
     success_msg_writer() << "segregation-height = " << m_wallet->segregation_height();
+    success_msg_writer() << "ignore-fractional-outputs = " << m_wallet->ignore_fractional_outputs();
     return true;
   }
   else
@@ -2512,6 +2529,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     CHECK_SIMPLE_VARIABLE("key-reuse-mitigation2", set_key_reuse_mitigation2, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("subaddress-lookahead", set_subaddress_lookahead, tr("<major>:<minor>"));
     CHECK_SIMPLE_VARIABLE("segregation-height", set_segregation_height, tr("unsigned integer"));
+    CHECK_SIMPLE_VARIABLE("ignore-fractional-outputs", set_ignore_fractional_outputs, tr("0 or 1"));
   }
   fail_msg_writer() << tr("set: unrecognized argument(s)");
   return true;
@@ -2758,7 +2776,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         }
       }
 
-      auto pwd_container = password_prompter(tr("Enter seed encryption passphrase, empty if none"), false);
+      auto pwd_container = password_prompter(tr("Enter seed offset passphrase, empty if none"), false);
       if (std::cin.eof() || !pwd_container)
         return false;
       epee::wipeable_string seed_pass = pwd_container->password();
@@ -2775,6 +2793,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
           m_recovery_key = cryptonote::decrypt_key(m_recovery_key, seed_pass);
       }
     }
+    epee::wipeable_string password;
     if (!m_generate_from_view_key.empty())
     {
       m_wallet_file = m_generate_from_view_key;
@@ -5787,6 +5806,64 @@ bool simple_wallet::get_tx_key(const std::vector<std::string> &args_)
   }
 }
 //----------------------------------------------------------------------------------------------------
+bool simple_wallet::set_tx_key(const std::vector<std::string> &args_)
+{
+  std::vector<std::string> local_args = args_;
+
+  if(local_args.size() != 2) {
+    fail_msg_writer() << tr("usage: set_tx_key <txid> <tx_key>");
+    return true;
+  }
+
+  crypto::hash txid;
+  if (!epee::string_tools::hex_to_pod(local_args[0], txid))
+  {
+    fail_msg_writer() << tr("failed to parse txid");
+    return true;
+  }
+
+  crypto::secret_key tx_key;
+  std::vector<crypto::secret_key> additional_tx_keys;
+  try
+  {
+    if (!epee::string_tools::hex_to_pod(local_args[1].substr(0, 64), tx_key))
+    {
+      fail_msg_writer() << tr("failed to parse tx_key");
+      return true;
+    }
+    while(true)
+    {
+      local_args[1] = local_args[1].substr(64);
+      if (local_args[1].empty())
+        break;
+      additional_tx_keys.resize(additional_tx_keys.size() + 1);
+      if (!epee::string_tools::hex_to_pod(local_args[1].substr(0, 64), additional_tx_keys.back()))
+      {
+        fail_msg_writer() << tr("failed to parse tx_key");
+        return true;
+      }
+    }
+  }
+  catch (const std::out_of_range &e)
+  {
+    fail_msg_writer() << tr("failed to parse tx_key");
+    return true;
+  }
+
+  LOCK_IDLE_SCOPE();
+
+  try
+  {
+    m_wallet->set_tx_key(txid, tx_key, additional_tx_keys);
+    success_msg_writer() << tr("Tx key successfully stored.");
+  }
+  catch (const std::exception &e)
+  {
+    fail_msg_writer() << tr("Failed to store tx key: ") << e.what();
+  }
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
 bool simple_wallet::get_tx_proof(const std::vector<std::string> &args)
 {
   if (m_wallet->key_on_device())
@@ -6436,7 +6513,7 @@ bool simple_wallet::unspent_outputs(const std::vector<std::string> &args_)
   auto local_args = args_;
 
   std::set<uint32_t> subaddr_indices;
-  if (local_args.size() > 0 && local_args[0].substr(0, 6) != "index=")
+  if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
   {
     if (!parse_subaddress_indices(local_args[0], subaddr_indices))
       return true;
@@ -6974,7 +7051,7 @@ bool simple_wallet::print_integrated_address(const std::vector<std::string> &arg
   crypto::hash8 payment_id;
   if (args.size() > 1)
   {
-    fail_msg_writer() << tr("usage: integrated_address ID");
+    fail_msg_writer() << tr("usage: integrated_address [payment ID]");
     return true;
   }
   if (args.size() == 0)
@@ -7504,8 +7581,12 @@ bool simple_wallet::show_transfer(const std::vector<std::string> &args)
       if (pd.m_unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER)
       {
         uint64_t bh = std::max(pd.m_unlock_time, pd.m_block_height + CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE);
+        uint64_t last_block_reward = m_wallet->get_last_block_reward();
+        uint64_t suggested_threshold = last_block_reward ? (pd.m_amount + last_block_reward - 1) / last_block_reward : 0;
         if (bh >= last_block_height)
           success_msg_writer() << "Locked: " << (bh - last_block_height) << " blocks to unlock";
+        else if (suggested_threshold > 0)
+          success_msg_writer() << std::to_string(last_block_height - bh) << " confirmations (" << suggested_threshold << " suggested threshold)";
         else
           success_msg_writer() << std::to_string(last_block_height - bh) << " confirmations";
       }
