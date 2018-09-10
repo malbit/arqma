@@ -394,14 +394,14 @@ namespace cryptonote
       /*! if the transaction was returned to the pool from the blockchain
        *  due to a reorg, then this will be true
        */
-      bool kept_by_block;  
+      bool kept_by_block;
 
       //! the highest block the transaction referenced when last checking it failed
       /*! if verifying a transaction's inputs fails, it's possible this is due
        *  to a reorg since it was created (if it used recently created outputs
        *  as inputs).
        */
-      uint64_t last_failed_height;  
+      uint64_t last_failed_height;
 
       //! the hash of the highest block the transaction referenced when last checking it failed
       /*! if verifying a transaction's inputs fails, it's possible this is due
@@ -536,7 +536,7 @@ private:
 #endif
 
     //! container for spent key images from the transactions in the pool
-    key_images_container m_spent_key_images;  
+    key_images_container m_spent_key_images;
 
     //TODO: this time should be a named constant somewhere, not hard-coded
     //! interval on which to check for stale/"stuck" transactions
@@ -555,6 +555,9 @@ private:
      */
     sorted_tx_container::iterator find_tx_in_sorted_container(const crypto::hash& id) const;
 
+    //! cache/call Blockchain::check_tx_inputs results
+    bool check_tx_inputs(const std::function<cryptonote::transaction&(void)> &get_tx, const crypto::hash &txid, uint64_t &max_used_block_height, crypto::hash &max_used_block_id, tx_verification_context &tvc, bool kept_by_block = false) const;
+
     //! transactions which are unlikely to be included in blocks
     /*! These transactions are kept in RAM in case they *are* included
      *  in a block eventually, but this container is not saved to disk.
@@ -565,6 +568,8 @@ private:
 
     size_t m_txpool_max_size;
     size_t m_txpool_size;
+
+    mutable std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>> m_input_cache;
   };
 }
 
@@ -596,6 +601,3 @@ namespace boost
 }
 BOOST_CLASS_VERSION(cryptonote::tx_memory_pool, CURRENT_MEMPOOL_ARCHIVE_VER)
 BOOST_CLASS_VERSION(cryptonote::tx_memory_pool::tx_details, CURRENT_MEMPOOL_TX_DETAILS_ARCHIVE_VER)
-
-
-

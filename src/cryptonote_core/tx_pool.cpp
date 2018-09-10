@@ -937,6 +937,25 @@ namespace cryptonote
     m_transactions_lock.unlock();
   }
   //---------------------------------------------------------------------------------
+  bool tx_memory_pool::check_tx_inputs(const std::function<cryptonote::transaction&(void)> &get_tx, const crypto::hash &txid, uint64_t &max_used_block_height, crypto::hash &max_used_block_id, tx_verification_context &tvc, bool kept_by_block) const
+  {
+    if (!kept_by_block)
+    {
+      const std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>>::const_iterator i = m_input_cache.find(txid);
+      if (i != m_input_cache.end())
+      {
+        max_used_block_height = std::get<2>(i->second);
+        max_used_block_id = std::get<3>(i->second);
+        tvc = std::get<1>(i->second);
+        return std::get<0>(i->second);
+      }
+    }
+    bool ret = m_blockchain.check_tx_inputs(get_tx(), max_used_block_height, max_used_block_id, tvc, kept_by_block);
+    if (!kept_by_block)
+      m_input_cache.insert(std::make_pair(txid, std::make_tuple(ret, tvc, max_used_block_height, max_used_block_id)));
+    return ret;
+  }
+  //---------------------------------------------------------------------------------
   bool tx_memory_pool::is_transaction_ready_to_go(txpool_tx_meta_t& txd, transaction &tx) const
   {
     //not the best implementation at this time, sorry :(
@@ -1084,7 +1103,7 @@ namespace cryptonote
     uint64_t best_coinbase = 0, coinbase = 0;
     total_size = 0;
     fee = 0;
-    
+
     //baseline empty block
     get_block_reward(median_size, total_size, already_generated_coins, best_coinbase, version);
 
