@@ -615,7 +615,7 @@ namespace tools
     /*!
      * \brief verifies given password is correct for default wallet keys file
      */
-    bool verify_password(const epee::wipeable_string& password) const;
+    bool verify_password(const epee::wipeable_string& password);
     cryptonote::account_base& get_account(){return m_account;}
     const cryptonote::account_base& get_account()const{return m_account;}
 
@@ -1159,6 +1159,10 @@ namespace tools
     bool set_blackballed_outputs(const std::vector<crypto::public_key> &outputs, bool add = false);
     bool unblackball_output(const crypto::public_key &output);
     bool is_output_blackballed(const crypto::public_key &output) const;
+
+    bool lock_keys_file();
+    bool unlock_keys_file();
+    bool is_keys_file_locked() const;
 
     void change_password(const std::string &filename, const epee::wipeable_string &original_password, const epee::wipeable_string &new_password);
 
