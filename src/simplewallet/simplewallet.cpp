@@ -3205,6 +3205,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       }
       m_wallet->set_refresh_from_block_height(m_restore_height);
     }
+    m_wallet->rewrite(m_wallet_file, password);
   }
   else
   {
@@ -3420,7 +3421,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     }
     mnemonic_language = get_mnemonic_language();
     if (mnemonic_language.empty())
-      return false;
+      return {};
   }
 
   m_wallet->set_seed_language(mnemonic_language);
@@ -3441,7 +3442,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   catch (const std::exception& e)
   {
     fail_msg_writer() << tr("failed to generate new wallet: ") << e.what();
-    return false;
+    return {};
   }
 
   // convert rng value to electrum-style word list
@@ -3466,7 +3467,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   }
   success_msg_writer() << "**********************************************************************";
 
-  return true;
+  return std::move(password);
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -3509,11 +3510,11 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   catch (const std::exception& e)
   {
     fail_msg_writer() << tr("failed to generate new wallet: ") << e.what();
-    return false;
+    return {};
   }
 
 
-  return true;
+  return std::move(password);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -3546,10 +3547,10 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   catch (const std::exception& e)
   {
     fail_msg_writer() << tr("failed to generate new wallet: ") << e.what();
-    return false;
+    return {};
   }
 
-  return true;
+  return std::move(password);
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -3591,7 +3592,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     if (!m_wallet->multisig(&ready, &threshold, &total) || !ready)
     {
       fail_msg_writer() << tr("failed to generate new mutlisig wallet");
-      return false;
+      return {};
     }
     message_writer(console_color_white, true) << boost::format(tr("Generated new %u/%u multisig wallet: ")) % threshold % total
       << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
@@ -3599,10 +3600,10 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   catch (const std::exception& e)
   {
     fail_msg_writer() << tr("failed to generate new wallet: ") << e.what();
-    return false;
+    return {};
   }
 
-  return true;
+  return std::move(password);
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::open_wallet(const boost::program_options::variables_map& vm)
