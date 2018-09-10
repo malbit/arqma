@@ -4001,6 +4001,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
   TIME_MEASURE_START(prepare);
   bool stop_batch;
   uint64_t bytes = 0;
+  size_t total_txs = 0;
 
   // Order of locking must be:
   //  m_incoming_tx_lock (optional)
@@ -4029,6 +4030,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     {
       bytes += tx_blob.size();
     }
+    total_txs += entry.txs.size();
   }
   while (!(stop_batch = m_db->batch_start(blocks_entry.size(), bytes))) {
     m_blockchain_lock.unlock();
@@ -4276,8 +4278,6 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       output_scan_worker(amount, offset_map[amount], tx_map[amount], transactions[i]);
     }
   }
-
-  int total_txs = 0;
 
   // now generate a table for each tx_prefix and k_image hashes
   tx_index = 0;
