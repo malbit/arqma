@@ -2832,8 +2832,9 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         return false;
       }
 
-      bool r = new_wallet(vm, info.address, boost::none, viewkey);
+      auto r = new_wallet(vm, info.address, boost::none, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
     }
     else if (!m_generate_from_spend_key.empty())
     {
@@ -2851,8 +2852,9 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         fail_msg_writer() << tr("failed to parse spend key secret key");
         return false;
       }
-      bool r = new_wallet(vm, m_recovery_key, true, false, "");
+      auto r = new_wallet(vm, m_recovery_key, true, false, "");
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
     }
     else if (!m_generate_from_keys.empty())
     {
@@ -2929,8 +2931,9 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         fail_msg_writer() << tr("view key does not match standard address");
         return false;
       }
-      bool r = new_wallet(vm, info.address, spendkey, viewkey);
+      auto r = new_wallet(vm, info.address, spendkey, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
     }
 
     // Asks user for all the data required to merge secret keys from multisig wallets into one master wallet, which then gets full control of the multisig wallet. The resulting wallet will be the same as any other regular wallet.
@@ -3063,8 +3066,9 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       }
 
       // create wallet
-      bool r = new_wallet(vm, info.address, spendkey, viewkey);
+      auto r = new_wallet(vm, info.address, spendkey, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
     }
 
     else if (!m_generate_from_json.empty())
@@ -3086,8 +3090,9 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
     {
       m_wallet_file = m_generate_from_device;
       // create wallet
-      bool r = new_wallet(vm, "Ledger");
+      auto r = new_wallet(vm, "Ledger");
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
       // if no block_height is specified, assume its a new account and start it "now"
       if(m_wallet->get_refresh_from_block_height() == 0) {
         {
@@ -3112,12 +3117,13 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         return false;
       }
       m_wallet_file = m_generate_new;
-      bool r;
+      boost::optional<epee::wipeable_string> r;
       if (m_restore_multisig_wallet)
         r = new_wallet(vm, multisig_keys, old_language);
       else
         r = new_wallet(vm, m_recovery_key, m_restore_deterministic_wallet, m_non_deterministic, old_language);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
+      password = *r;
     }
 
     if (m_restoring && m_generate_from_json.empty() && m_generate_from_device.empty())
