@@ -108,6 +108,9 @@ namespace wallet_args
 
     std::string lang = i18n_get_language();
     tools::on_startup();
+#ifdef NDEBUG
+    tools::disable_core_dumps();
+#endif
     tools::set_strict_default_file_permissions(true);
 
     epee::string_tools::set_module_name_and_folder(argv[0]);
@@ -180,7 +183,7 @@ namespace wallet_args
       log_path = command_line::get_arg(vm, arg_log_file);
     else
       log_path = mlog_get_default_log_path(default_log_name);
-    mlog_configure(log_path, log_to_console, command_line::get_arg(vm, arg_max_log_file_size));
+    mlog_configure(log_path, log_to_console, command_line::get_arg(vm, arg_max_log_file_size), command_line::get_arg(vm, arg_max_log_files));
     if (!command_line::is_arg_defaulted(vm, arg_log_level))
     {
       mlog_set_log(command_line::get_arg(vm, arg_log_level).c_str());

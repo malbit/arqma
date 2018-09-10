@@ -341,7 +341,6 @@ namespace cryptonote
       bytes = m_txpool_max_size;
     CRITICAL_REGION_LOCAL1(m_blockchain);
     LockedTXN lock(m_blockchain);
-    bool changed = false;
 
     // this will never remove the first one, but we don't care
     auto it = --m_txs_by_fee_and_receive_time.end();
@@ -1049,7 +1048,6 @@ namespace cryptonote
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
-    bool changed = false;
     LockedTXN lock(m_blockchain);
     for(size_t i = 0; i!= tx.vin.size(); i++)
     {
