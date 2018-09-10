@@ -3376,8 +3376,9 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   m_wallet = std::move(rc.first);
   if (!m_wallet)
   {
-    return false;
+    return {};
   }
+  epee::wipeable_string password = rc.second.password();
 
   if (!m_subaddress_lookahead.empty())
   {
@@ -3470,8 +3471,9 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   m_wallet = std::move(rc.first);
   if (!m_wallet)
   {
-    return false;
+    return {};
   }
+  epee::wipeable_string password = rc.second.password();
 
   if (!m_subaddress_lookahead.empty())
   {
