@@ -367,6 +367,7 @@ private:
                 , const size_t& block_size
                 , const difficulty_type& cumulative_difficulty
                 , const uint64_t& coins_generated
+                , uint64_t num_rct_outs
                 , const crypto::hash& blk_hash
                 ) = 0;
 
@@ -892,6 +893,20 @@ public:
   virtual uint64_t get_block_timestamp(const uint64_t& height) const = 0;
 
   /**
+   * @brief fetch a block's cumulative number of rct outputs
+   *
+   * The subclass should return the numer of rct outputs in the blockchain
+   * up to the block with the given height (inclusive).
+   *
+   * If the block does not exist, the subclass should throw BLOCK_DNE
+   *
+   * @param height the height requested
+   *
+   * @return the cumulative number of rct outputs
+   */
+  virtual std::vector<uint64_t> get_block_cumulative_rct_outputs(const std::vector<uint64_t> &heights) const = 0;
+
+  /**
    * @brief fetch the top block's timestamp
    *
    * The subclass should return the timestamp of the most recent block.
@@ -1247,7 +1262,7 @@ public:
    *
    * @return the requested output data
    */
-  
+
   virtual tx_out_index get_output_tx_and_index_from_global(const uint64_t& index) const = 0;
 
   /**

@@ -47,7 +47,6 @@ using namespace epee;
 #include "rpc/rpc_args.h"
 #include "core_rpc_server_error_codes.h"
 #include "p2p/net_node.h"
-#include "get_output_distribution_cache.h"
 #include "version.h"
 
 #undef MONERO_DEFAULT_LOG_CATEGORY

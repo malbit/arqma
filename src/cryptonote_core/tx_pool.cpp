@@ -377,7 +377,6 @@ namespace cryptonote
         remove_transaction_keyimages(tx);
         MINFO("Pruned tx " << txid << " from txpool: size: " << it->first.second << ", fee/byte: " << it->first.first);
         m_txs_by_fee_and_receive_time.erase(it--);
-        changed = true;
       }
       catch (const std::exception &e)
       {
@@ -1068,7 +1067,6 @@ namespace cryptonote
           {
             MDEBUG("Marking " << txid << " as double spending " << itk.k_image);
             meta.double_spend_seen = true;
-            changed = true;
             try
             {
               m_blockchain.update_txpool_tx(txid, meta);
