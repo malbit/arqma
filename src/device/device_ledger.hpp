@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -85,7 +85,7 @@ namespace hw {
 
         //IO
         hw::io::device_io_hid hw_device;
-        std::string   full_name;        
+        std::string   full_name;
         unsigned int  length_send;
         unsigned char buffer_send[BUFFER_SEND_SIZE];
         unsigned int  length_recv;
@@ -109,7 +109,7 @@ namespace hw {
         // To speed up blockchain parsing the view key maybe handle here.
         crypto::secret_key viewkey;
         bool has_view_key;
-        
+
         //extra debug
         #ifdef DEBUG_HWDEVICE
         device *controle_device;
@@ -142,7 +142,7 @@ namespace hw {
 
         /* ======================================================================= */
         /*  LOCKER                                                                 */
-        /* ======================================================================= */ 
+        /* ======================================================================= */
         void lock(void)  override;
         void unlock(void) override;
         bool try_lock(void) override;
@@ -152,7 +152,7 @@ namespace hw {
         /* ======================================================================= */
         bool  get_public_address(cryptonote::account_public_address &pubkey) override;
         bool  get_secret_keys(crypto::secret_key &viewkey , crypto::secret_key &spendkey) override;
-        bool  generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key, uint64_t kdf_rounds) override;
+        bool  generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key) override;
 
 
         /* ======================================================================= */
@@ -215,4 +215,3 @@ namespace hw {
   }
 
 }
-
