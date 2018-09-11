@@ -2593,7 +2593,7 @@ bool wallet2::refresh(bool trusted_daemon, uint64_t & blocks_fetched, bool& rece
   return ok;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::get_output_distribution(uint64_t &start_height, std::vector<uint64_t> &distribution)
+bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t> &distribution)
 {
   uint32_t rpc_version;
   boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_version(rpc_version);
@@ -2941,6 +2941,7 @@ void wallet2::setup_keys(const epee::wipeable_string &password)
   memcpy(cache_key_data.data(), &key, HASH_SIZE);
   cache_key_data[HASH_SIZE] = CACHE_KEY_TAIL;
   cn_fast_hash(cache_key_data.data(), HASH_SIZE+1, (crypto::hash&)m_cache_key);
+  get_ringdb_key();
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::change_password(const std::string &filename, const epee::wipeable_string &original_password, const epee::wipeable_string &new_password)
@@ -6039,6 +6040,18 @@ bool wallet2::set_ring_database(const std::string &filename)
   return true;
 }
 
+crypto::chacha_key wallet2::get_ringdb_key()
+{
+  if (!m_ringdb_key)
+  {
+    MINFO("caching ringdb key");
+    crypto::chacha_key key;
+    generate_chacha_key_from_secret_keys(key);
+    m_ringdb_key = key;
+  }
+  return *m_ringdb_key;
+}
+
 bool wallet2::add_rings(const crypto::chacha_key &key, const cryptonote::transaction_prefix &tx)
 {
   if (!m_ringdb)
@@ -6049,9 +6062,7 @@ bool wallet2::add_rings(const crypto::chacha_key &key, const cryptonote::transac
 
 bool wallet2::add_rings(const cryptonote::transaction_prefix &tx)
 {
-  crypto::chacha_key key;
-  generate_chacha_key_from_secret_keys(key);
-  try { return add_rings(key, tx); }
+  try { return add_rings(get_ringdb_key(), tx); }
   catch (const std::exception &e) { return false; }
 }
 
@@ -6059,9 +6070,7 @@ bool wallet2::remove_rings(const cryptonote::transaction_prefix &tx)
 {
   if (!m_ringdb)
     return false;
-  crypto::chacha_key key;
-  generate_chacha_key_from_secret_keys(key);
-  try { return m_ringdb->remove_rings(key, tx); }
+  try { return m_ringdb->remove_rings(get_ringdb_key(), tx); }
   catch (const std::exception &e) { return false; }
 }
 
@@ -6098,10 +6107,7 @@ bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::
 
 bool wallet2::get_ring(const crypto::key_image &key_image, std::vector<uint64_t> &outs)
 {
-  crypto::chacha_key key;
-  generate_chacha_key_from_secret_keys(key);
-
-  try { return get_ring(key, key_image, outs); }
+  try { return get_ring(get_ringdb_key(), key_image, outs); }
   catch (const std::exception &e) { return false; }
 }
 
@@ -6110,10 +6116,7 @@ bool wallet2::set_ring(const crypto::key_image &key_image, const std::vector<uin
   if (!m_ringdb)
     return false;
 
-  crypto::chacha_key key;
-  generate_chacha_key_from_secret_keys(key);
-
-  try { return m_ringdb->set_ring(key, key_image, outs, relative); }
+  try { return m_ringdb->set_ring(get_ringdb_key(), key_image, outs, relative); }
   catch (const std::exception &e) { return false; }
 }
 
@@ -6180,7 +6183,7 @@ bool wallet2::find_and_save_rings(bool force)
     crypto::hash tx_hash, tx_prefix_hash;
     THROW_WALLET_EXCEPTION_IF(!cryptonote::parse_and_validate_tx_from_blob(bd, tx, tx_hash, tx_prefix_hash), error::wallet_internal_error, "failed to parse tx from blob");
     THROW_WALLET_EXCEPTION_IF(epee::string_tools::pod_to_hex(tx_hash) != tx_info.tx_hash, error::wallet_internal_error, "txid mismatch");
-    THROW_WALLET_EXCEPTION_IF(!add_rings(key, tx), error::wallet_internal_error, "Failed to save ring");
+    THROW_WALLET_EXCEPTION_IF(!add_rings(get_ringdb_key(), tx), error::wallet_internal_error, "Failed to save ring");
     }
   }
 
