@@ -74,7 +74,7 @@ namespace hw {
           if (buf[i] != 0) break;
         }
         if (i == 32) {
-          memmove(buf, hw::ledger::dbg_viewkey.data);
+          memmove(buf, hw::ledger::dbg_viewkey.data, 32);
           return;
         }
         //spend key?
@@ -82,7 +82,7 @@ namespace hw {
           if (buf[i] != (char)0xff) break;
         }
         if (i == 32) {
-          memmove(buf, hw::ledger::dbg_spendkey.data);
+          memmove(buf, hw::ledger::dbg_spendkey.data, 32);
           return;
         }
       }
@@ -95,33 +95,33 @@ namespace hw {
 
     crypto::key_derivation decrypt(const crypto::key_derivation &derivation) {
        crypto::key_derivation x = derivation;
-       decrypt(x.data);
+       decrypt(x.data, 32);
        return x;
     }
 
     cryptonote::account_keys decrypt(const cryptonote::account_keys& keys) {
        cryptonote::account_keys x = keys;
-       decrypt(x.m_view_secret_key.data);
-       decrypt(x.m_spend_secret_key.data);
+       decrypt(x.m_view_secret_key.data, 32);
+       decrypt(x.m_spend_secret_key.data, 32);
        return x;
     }
 
 
     crypto::secret_key decrypt(const crypto::secret_key &sec) {
        crypto::secret_key  x = sec;
-       decrypt(x.data);
+       decrypt(x.data, 32);
        return x;
     }
 
     rct::key  decrypt(const rct::key &sec)  {
          rct::key  x = sec;
-       decrypt((char*)x.bytes);
+       decrypt((char*)x.bytes, 32);
        return x;
     }
 
     crypto::ec_scalar decrypt(const crypto::ec_scalar &res)  {
        crypto::ec_scalar  x = res;
-       decrypt((char*)x.data);
+       decrypt((char*)x.data, 32);
        return x;
     }
 
