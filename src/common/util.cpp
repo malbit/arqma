@@ -193,7 +193,7 @@ namespace tools
     }
     catch (...) {}
   }
-  
+
     file_locker::file_locker(const std::string &filename)
   {
 #ifdef WIN32
@@ -681,6 +681,21 @@ std::string get_nix_version_display_string()
   static void setup_crash_dump() {}
 #endif
 
+  bool disable_core_dumps()
+  {
+#ifdef __GLIBC__
+  // disable core dumps in release mode
+  struct rlimit rlimit;
+  rlimit.rlim_cur = rlimit.rlim_max = 0;
+  if (setrlimit(RLIMIT_CORE, &rlimit))
+  {
+    MWARNING("Failed to disable core dumps");
+    return false;
+  }
+#endif
+  return true;
+  }
+
   bool on_startup()
   {
     mlog_configure("", true);
@@ -918,7 +933,7 @@ std::string get_nix_version_display_string()
       return {};
     }
   }
-  
+
   std::string glob_to_regex(const std::string &val)
   {
     std::string newval;

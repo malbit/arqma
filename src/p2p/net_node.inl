@@ -517,7 +517,7 @@ namespace nodetool
     for (const auto& full_addr : full_addrs)
     {
       MDEBUG("Seed node: " << full_addr);
-      append_net_address(m_seed_nodes, full_addr);
+      append_net_address(m_seed_nodes, full_addr, m_nettype == cryptonote::TESTNET ? ::config::testnet::P2P_DEFAULT_PORT : m_nettype == cryptonote::STAGENET ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT);
     }
     MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
 
@@ -1162,7 +1162,7 @@ namespace nodetool
             for (const auto &peer: get_seed_nodes(m_nettype))
             {
               MDEBUG("Fallback seed node: " << peer);
-              append_net_address(m_seed_nodes, peer);
+              append_net_address(m_seed_nodes, peer, m_nettype == cryptonote::TESTNET ? ::config::testnet::P2P_DEFAULT_PORT : m_nettype == cryptonote::STAGENET ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT);
             }
             m_fallback_seed_nodes_added = true;
             if (current_index == m_seed_nodes.size())
