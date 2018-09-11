@@ -562,6 +562,7 @@ else()
   add_c_flag_if_supported(-Wformat-security C_SECURITY_FLAGS)
   add_cxx_flag_if_supported(-Wformat-security CXX_SECURITY_FLAGS)
 
+# -fstack-protector
 if (NOT WIN32)
   add_c_flag_if_supported(-fstack-protector C_SECURITY_FLAGS)
   add_cxx_flag_if_supported(-fstack-protector CXX_SECURITY_FLAGS)
@@ -817,6 +818,7 @@ endif()
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 if(MINGW)
+  set(WARNINGS "${WARNINGS} -Wno-dev")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wa,-mbig-obj")
   set(EXTRA_LIBRARIES mswsock;ws2_32;crypt32;iphlpapi)
   set(ICU_LIBRARIES ${Boost_LOCALE_LIBRARY} icuio icuin icuuc icudt icutu iconv)
