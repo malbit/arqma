@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -53,13 +53,13 @@ namespace hw {
   }
 
 
-  #ifdef WITH_DEVICE_LEDGER    
+  #ifdef WITH_DEVICE_LEDGER
     namespace ledger {
-    
+
     #undef MONERO_DEFAULT_LOG_CATEGORY
     #define MONERO_DEFAULT_LOG_CATEGORY "device.ledger"
 
-    
+
     #ifdef DEBUG_HWDEVICE
     extern crypto::secret_key dbg_viewkey;
     extern crypto::secret_key dbg_spendkey;
@@ -74,7 +74,7 @@ namespace hw {
           if (buf[i] != 0) break;
         }
         if (i == 32) {
-          memmove(buf, hw::ledger::dbg_viewkey.data, 32);
+          memmove(buf, hw::ledger::dbg_viewkey.data);
           return;
         }
         //spend key?
@@ -82,7 +82,7 @@ namespace hw {
           if (buf[i] != (char)0xff) break;
         }
         if (i == 32) {
-          memmove(buf, hw::ledger::dbg_spendkey.data, 32);
+          memmove(buf, hw::ledger::dbg_spendkey.data);
           return;
         }
       }
@@ -95,33 +95,33 @@ namespace hw {
 
     crypto::key_derivation decrypt(const crypto::key_derivation &derivation) {
        crypto::key_derivation x = derivation;
-       decrypt(x.data, 32);
+       decrypt(x.data);
        return x;
     }
 
     cryptonote::account_keys decrypt(const cryptonote::account_keys& keys) {
        cryptonote::account_keys x = keys;
-       decrypt(x.m_view_secret_key.data, 32);
-       decrypt(x.m_spend_secret_key.data, 32);
+       decrypt(x.m_view_secret_key.data);
+       decrypt(x.m_spend_secret_key.data);
        return x;
     }
 
 
     crypto::secret_key decrypt(const crypto::secret_key &sec) {
        crypto::secret_key  x = sec;
-       decrypt(x.data, 32);
+       decrypt(x.data);
        return x;
     }
 
     rct::key  decrypt(const rct::key &sec)  {
          rct::key  x = sec;
-       decrypt((char*)x.bytes, 32);
+       decrypt((char*)x.bytes);
        return x;
     }
 
     crypto::ec_scalar decrypt(const crypto::ec_scalar &res)  {
        crypto::ec_scalar  x = res;
-       decrypt((char*)x.data, 32);
+       decrypt((char*)x.data);
        return x;
     }
 
@@ -166,6 +166,6 @@ namespace hw {
     #endif
 
   }
-  #endif //WITH_DEVICE_LEDGER    
+  #endif //WITH_DEVICE_LEDGER
 
 }
