@@ -58,14 +58,14 @@ private:
   boost::mutex &m_daemon_rpc_mutex;
 
   mutable uint64_t m_height;
-  mutable time_t m_height_time;
   mutable uint64_t m_earliest_height[256];
   mutable uint64_t m_dynamic_per_kb_fee_estimate;
   mutable uint64_t m_dynamic_per_kb_fee_estimate_cached_height;
   mutable uint64_t m_dynamic_per_kb_fee_estimate_grace_blocks;
   mutable uint32_t m_rpc_version;
   mutable uint64_t m_target_height;
-  mutable time_t m_target_height_time;
+  mutable uint64_t m_block_size_limit;
+  mutable time_t m_get_info_time;
 };
 
 }
