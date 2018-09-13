@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-//
+// 
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-//
+// 
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-//
+// 
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-//
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -33,7 +33,7 @@
 #include "cryptonote_basic/account.h"
 #include "cryptonote_basic/subaddress_index.h"
 
-#include <boost/thread/locks.hpp>
+#include <boost/thread/locks.hpp> 
 #include <boost/thread/lock_guard.hpp>
 
 namespace hw {
@@ -65,7 +65,7 @@ namespace hw {
     #define ASSERT_RV(rv)        CHECK_AND_ASSERT_THROW_MES((rv)==SCARD_S_SUCCESS, "Fail SCard API : (" << (rv) << ") "<< pcsc_stringify_error(rv)<<" Device="<<this->id<<", hCard="<<hCard<<", hContext="<<hContext);
     #define ASSERT_SW(sw,ok,msk) CHECK_AND_ASSERT_THROW_MES(((sw)&(mask))==(ok), "Wrong Device Status : SW=" << std::hex << (sw) << " (EXPECT=" << std::hex << (ok) << ", MASK=" << std::hex << (mask) << ")") ;
     #define ASSERT_T0(exp)       CHECK_AND_ASSERT_THROW_MES(exp, "Protocol assert failure: "#exp ) ;
-    #define ASSERT_X(exp,msg)    CHECK_AND_ASSERT_THROW_MES(exp, msg);
+    #define ASSERT_X(exp,msg)    CHECK_AND_ASSERT_THROW_MES(exp, msg); 
 
     #ifdef DEBUG_HWDEVICE
       crypto::secret_key dbg_viewkey;
@@ -135,7 +135,7 @@ namespace hw {
       return sec == crypto::null_skey;
     }
 
-      bool operator==(const crypto::key_derivation &d0, const crypto::key_derivation &d1) {
+    bool operator==(const crypto::key_derivation &d0, const crypto::key_derivation &d1) {
       static_assert(sizeof(crypto::key_derivation) == 32, "key_derivation must be 32 bytes");
       return !crypto_verify_32((const unsigned char*)&d0, (const unsigned char*)&d1);
     }
@@ -185,9 +185,42 @@ namespace hw {
     #define INS_GET_RESPONSE                    0xc0
 
 
-    device_ledger::device_ledger(): hw_device(0x0101, 0x05, 64, 10000) {
+    void device_ledger::logCMD() {
+      if (apdu_verbose) {
+        char  strbuffer[1024];
+        snprintf(strbuffer, sizeof(strbuffer), "%.02x %.02x %.02x %.02x %.02x ",
+          this->buffer_send[0],
+          this->buffer_send[1],
+          this->buffer_send[2],
+          this->buffer_send[3],
+          this->buffer_send[4]
+          );
+        const size_t len = strlen(strbuffer);
+        buffer_to_str(strbuffer+len, sizeof(strbuffer)-len, (char*)(this->buffer_send+5), this->length_send-5);
+        MDEBUG( "CMD  :" << strbuffer);
+      }
+    }
+
+    void device_ledger::logRESP() {
+      if (apdu_verbose) {
+        char  strbuffer[1024];
+        snprintf(strbuffer, sizeof(strbuffer), "%.02x%.02x ",
+          this->buffer_recv[this->length_recv-2],
+          this->buffer_recv[this->length_recv-1]
+          );
+        const size_t len = strlen(strbuffer);
+        buffer_to_str(strbuffer+len, sizeof(strbuffer)-len, (char*)(this->buffer_recv), this->length_recv-2);
+        MDEBUG( "RESP :" << strbuffer);
+
+      }
+    }
+
+    /* -------------------------------------------------------------- */
+    device_ledger::device_ledger() {
       this->id = device_id++;
-      this->reset_buffer();
+      this->hCard   = 0;
+      this->hContext = 0;
+      this->reset_buffer();      
       this->mode = NONE;
       this->has_view_key = false;
       MDEBUG( "Device "<<this->id <<" Created");
@@ -200,8 +233,8 @@ namespace hw {
 
     /* ======================================================================= */
     /*  LOCKER                                                                 */
-    /* ======================================================================= */
-
+    /* ======================================================================= */ 
+    
     //automatic lock one more level on device ensuring the current thread is allowed to use it
     #define AUTO_LOCK_CMD() \
       /* lock both mutexes without deadlock*/ \
@@ -239,39 +272,10 @@ namespace hw {
       MDEBUG( "Device "<<this->name << " UNLOCKed");
     }
 
-
     /* ======================================================================= */
-    /*                                     IO                                  */
+    /*                                   MISC                                  */
     /* ======================================================================= */
-
-      void device_ledger::logCMD() {
-      if (apdu_verbose) {
-        char  strbuffer[1024];
-        snprintf(strbuffer, sizeof(strbuffer), "%.02x %.02x %.02x %.02x %.02x ",
-          this->buffer_send[0],
-          this->buffer_send[1],
-          this->buffer_send[2],
-          this->buffer_send[3],
-          this->buffer_send[4]
-          );
-        const size_t len = strlen(strbuffer);
-        buffer_to_str(strbuffer+len, sizeof(strbuffer)-len, (char*)(this->buffer_send+5), this->length_send-5);
-        MDEBUG( "CMD  : " << strbuffer);
-      }
-    }
-
-    void device_ledger::logRESP() {
-      if (apdu_verbose) {
-        char  strbuffer[1024];
-        snprintf(strbuffer, sizeof(strbuffer), "%.04x ", this->sw);
-        const size_t len = strlen(strbuffer);
-        buffer_to_str(strbuffer+len, sizeof(strbuffer)-len, (char*)(this->buffer_recv), this->length_recv);
-        MDEBUG( "RESP : " << strbuffer);
-
-      }
-    }
-
-    int device_ledger::set_command_header(unsigned char ins, unsigned char p1, unsigned char p2) {
+    int device_ledger::set_command_header(BYTE ins, BYTE p1, BYTE p2) {
       reset_buffer();
       int offset = 0;
       this->buffer_send[0] = 0x00;
@@ -282,7 +286,7 @@ namespace hw {
       return 5;
     }
 
-    int device_ledger::set_command_header_noopt(unsigned char ins, unsigned char p1, unsigned char p2) {
+    int device_ledger::set_command_header_noopt(BYTE ins, BYTE p1, BYTE p2) {
       int offset = set_command_header(ins, p1, p2);
       //options
       this->buffer_send[offset++] = 0;
@@ -290,7 +294,7 @@ namespace hw {
       return offset;
     }
 
-    void device_ledger::send_simple(unsigned char ins, unsigned char p1) {
+    void device_ledger::send_simple(BYTE ins, BYTE p1) {
       this->length_send = set_command_header_noopt(ins, p1);
       this->exchange();
     }
@@ -299,19 +303,25 @@ namespace hw {
         send_simple(INS_RESET);
         return true;
     }
-
+     
     unsigned int device_ledger::exchange(unsigned int ok, unsigned int mask) {
+      LONG rv;
+      unsigned int sw;
+
+      ASSERT_T0(this->length_send <= BUFFER_SEND_SIZE);
       logCMD();
-
-      this->length_recv =  hw_device.exchange(this->buffer_send, this->length_send, this->buffer_recv, BUFFER_SEND_SIZE);
-      ASSERT_X(this->length_recv>=2, "Communication error, less than tow bytes received");
-
-      this->length_recv -= 2;
-      this->sw = (this->buffer_recv[length_recv]<<8) | this->buffer_recv[length_recv+1];
-      ASSERT_SW(this->sw,ok,msk);
-
+      this->length_recv = BUFFER_RECV_SIZE;
+      rv = SCardTransmit(this->hCard,
+                         SCARD_PCI_T0, this->buffer_send, this->length_send,
+                         NULL,         this->buffer_recv, &this->length_recv);
+      ASSERT_RV(rv);
+      ASSERT_T0(this->length_recv >= 2);
+      ASSERT_T0(this->length_recv <= BUFFER_RECV_SIZE);
       logRESP();
-      return this->sw;
+
+      sw = (this->buffer_recv[this->length_recv-2]<<8) | this->buffer_recv[this->length_recv-1];
+      ASSERT_SW(sw,ok,msk);
+      return sw;
     }
 
     void device_ledger::reset_buffer() {
@@ -331,25 +341,101 @@ namespace hw {
     }
 
     const std::string device_ledger::get_name() const {
-      if (this->full_name.empty() || !this->connected()) {
+      if (this->full_name.empty() || (this->hCard == 0)) {
         return std::string("<disconnected:").append(this->name).append(">");
       }
-      return this->name;
+      return this->full_name;
     }
 
     bool device_ledger::init(void) {
       #ifdef DEBUG_HWDEVICE
       this->controle_device = &hw::get_device("default");
       #endif
+      LONG  rv;
       this->release();
-      hw_device.init();
-      MDEBUG( "Device "<<this->id <<" HIDUSB inited");
+      rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM,0,0, &this->hContext);
+      ASSERT_RV(rv);
+      MDEBUG( "Device "<<this->id <<" SCardContext created: hContext="<<this->hContext);
+      this->hCard = 0;
+      return true;
+    }
+
+    bool device_ledger::release() {
+      this->disconnect();
+      if (this->hContext) {
+        SCardReleaseContext(this->hContext);
+        MDEBUG( "Device "<<this->id <<" SCardContext released: hContext="<<this->hContext);
+        this->hContext = 0;
+        this->full_name.clear();
+      }
       return true;
     }
 
     bool device_ledger::connect(void) {
+      BYTE  pbAtr[MAX_ATR_SIZE];
+      LPSTR mszReaders;
+      DWORD dwReaders;
+      LONG  rv;
+      DWORD dwState, dwProtocol, dwAtrLen, dwReaderLen;
+
       this->disconnect();
-      hw_device.connect(0x2c97,0x0001, 0, 0xffa0, hw_device.OR_SELECT);
+#ifdef SCARD_AUTOALLOCATE
+      dwReaders = SCARD_AUTOALLOCATE;
+      rv = SCardListReaders(this->hContext, NULL, (LPSTR)&mszReaders, &dwReaders);
+#else
+      dwReaders = 0;
+      rv = SCardListReaders(this->hContext, NULL, NULL, &dwReaders);
+      if (rv != SCARD_S_SUCCESS)
+        return false;
+      mszReaders = (LPSTR)calloc(dwReaders, sizeof(char));
+      rv = SCardListReaders(this->hContext, NULL, mszReaders, &dwReaders);
+#endif
+      if (rv == SCARD_S_SUCCESS) {
+        char* p;
+        const char* prefix = this->name.c_str();
+
+        p = mszReaders;
+        MDEBUG( "Looking for " << std::string(prefix));
+        while (*p) {
+          MDEBUG( "Device Found: " <<  std::string(p));
+          if ((strncmp(prefix, p, strlen(prefix))==0)) {
+            MDEBUG( "Device Match: " <<  std::string(p));
+            if ((rv = SCardConnect(this->hContext,
+                                   p, SCARD_SHARE_EXCLUSIVE, SCARD_PROTOCOL_T0,
+                                   &this->hCard, &dwProtocol))!=SCARD_S_SUCCESS) {
+              break;
+            }
+            MDEBUG( "Device "<<this->id <<" Connected: hCard="<<this->hCard);
+            dwAtrLen = sizeof(pbAtr);
+            if ((rv = SCardStatus(this->hCard, NULL, &dwReaderLen, &dwState, &dwProtocol, pbAtr, &dwAtrLen))!=SCARD_S_SUCCESS) {
+              break;
+            }
+            MDEBUG( "Device "<<this->id <<" Status OK");
+            rv = SCARD_S_SUCCESS ;
+            this->full_name = std::string(p);
+            break;
+          }
+          p += strlen(p) +1;
+        }
+      }
+
+      if (rv == SCARD_S_SUCCESS && mszReaders) {
+        #ifdef SCARD_AUTOALLOCATE
+        SCardFreeMemory(this->hContext, mszReaders);
+        #else
+        free(mszReaders);
+        #endif
+        mszReaders = NULL;
+      }
+      if (rv != SCARD_S_SUCCESS) {
+        if ( hCard) {
+          SCardDisconnect(this->hCard, SCARD_UNPOWER_CARD);
+          MDEBUG( "Device "<<this->id <<" disconnected: hCard="<<this->hCard);
+          this->hCard = 0;
+        }
+      }
+      ASSERT_RV(rv);
+
       this->reset();
       #ifdef DEBUG_HWDEVICE
       cryptonote::account_public_address pubkey;
@@ -359,21 +445,15 @@ namespace hw {
       crypto::secret_key skey;
       this->get_secret_keys(vkey,skey);
 
-      return true;
-    }
-
-    bool device_ledger::connected(void) const {
-      return hw_device.connected();
+      return rv==SCARD_S_SUCCESS;
     }
 
     bool device_ledger::disconnect() {
-      hw_device.disconnect();
-      return true;
-    }
-
-    bool device_ledger::release() {
-      this->disconnect();
-      hw_device.release();
+      if (this->hCard) {
+        SCardDisconnect(this->hCard, SCARD_UNPOWER_CARD);
+        MDEBUG( "Device "<<this->id <<" disconnected: hCard="<<this->hCard); 
+        this->hCard = 0;
+      }
       return true;
     }
 
@@ -397,7 +477,7 @@ namespace hw {
           this->mode = mode;
           break;
 
-        case TRANSACTION_PARSE:
+        case TRANSACTION_PARSE: 
         case NONE:
           this->mode = mode;
           break;
@@ -420,7 +500,7 @@ namespace hw {
 
         memmove(pubkey.m_view_public_key.data, this->buffer_recv, 32);
         memmove(pubkey.m_spend_public_key.data, this->buffer_recv+32, 32);
-
+ 
         return true;
     }
 
@@ -443,7 +523,7 @@ namespace hw {
           MDEBUG("Have view key");
           this->has_view_key = true;
         }
-
+      
         #ifdef DEBUG_HWDEVICE
         memmove(dbg_viewkey.data, this->buffer_recv+0, 32);
         memmove(dbg_spendkey.data, this->buffer_recv+32, 32);
@@ -452,20 +532,20 @@ namespace hw {
         return true;
     }
 
-    bool  device_ledger::generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key) {
+    bool  device_ledger::generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key, uint64_t kdf_rounds) {
         AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         crypto::chacha_key key_x;
-        cryptonote::account_keys keys_x = hw::ledger::decrypt(keys);
-        this->controle_device->generate_chacha_key(keys_x, key_x);
+        cryptonote::account_keys keys_x = hw::ledger::decrypt(keys); 
+        this->controle_device->generate_chacha_key(keys_x, key_x, kdf_rounds);
         #endif
 
         send_simple(INS_GET_CHACHA8_PREKEY);
 
         char prekey[200];
         memmove(prekey, &this->buffer_recv[0], 200);
-        crypto::generate_chacha_key_prehashed(&prekey[0], sizeof(prekey), key);
+        crypto::generate_chacha_key_prehashed(&prekey[0], sizeof(prekey), key, kdf_rounds);
 
         #ifdef DEBUG_HWDEVICE
         hw::ledger::check32("generate_chacha_key_prehashed", "key", (char*)key_x.data(), (char*)key.data());
@@ -483,7 +563,7 @@ namespace hw {
         #ifdef DEBUG_HWDEVICE
         const crypto::public_key pub_x = pub;
         crypto::key_derivation derivation_x;
-         if ((this->mode == TRANSACTION_PARSE) && has_view_key) {
+         if ((this->mode == TRANSACTION_PARSE) && has_view_key) {    
           derivation_x = derivation;
         } else {
           derivation_x = hw::ledger::decrypt(derivation);
@@ -497,13 +577,13 @@ namespace hw {
         hw::ledger::log_hexbuffer("derive_subaddress_public_key: [[OUT]] derived_pub", derived_pub_x.data, 32);
         #endif
 
-      if ((this->mode == TRANSACTION_PARSE) && has_view_key) {
+      if ((this->mode == TRANSACTION_PARSE) && has_view_key) {     
         //If we are in TRANSACTION_PARSE, the given derivation has been retrieved uncrypted (wihtout the help
         //of the device), so continue that way.
-        MDEBUG( "derive_subaddress_public_key  : PARSE mode with known viewkey");
+        MDEBUG( "derive_subaddress_public_key  : PARSE mode with known viewkey");     
         crypto::derive_subaddress_public_key(pub, derivation, output_index,derived_pub);
       } else {
-
+       
         int offset = set_command_header_noopt(INS_DERIVE_SUBADDRESS_PUBLIC_KEY);
         //pub
         memmove(this->buffer_send+offset, pub.data, 32);
@@ -699,10 +779,10 @@ namespace hw {
         const rct::key P_x    =  P;
         const rct::key a_x    =  hw::ledger::decrypt(a);
         rct::key aP_x;
-        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  P ", (char*)P_x.bytes, 32);
-        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  a ", (char*)a_x.bytes, 32);
+        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  P ", (char*)P_x.bytes, 32);       
+        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  a ", (char*)a_x.bytes, 32);       
         this->controle_device->scalarmultKey(aP_x, P_x, a_x);
-        hw::ledger::log_hexbuffer("scalarmultKey: [[OUT]] aP", (char*)aP_x.bytes, 32);
+        hw::ledger::log_hexbuffer("scalarmultKey: [[OUT]] aP", (char*)aP_x.bytes, 32);       
         #endif
 
         int offset = set_command_header_noopt(INS_SECRET_SCAL_MUL_KEY);
@@ -734,9 +814,9 @@ namespace hw {
         #ifdef DEBUG_HWDEVICE
         const rct::key a_x    =  hw::ledger::decrypt(a);
         rct::key aG_x;
-        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  a ", (char*)a_x.bytes, 32);
+        hw::ledger::log_hexbuffer("scalarmultKey: [[IN]]  a ", (char*)a_x.bytes, 32);       
         this->controle_device->scalarmultBase(aG_x, a_x);
-        hw::ledger::log_hexbuffer("scalarmultKey: [[OUT]] aG", (char*)aG_x.bytes, 32);
+        hw::ledger::log_hexbuffer("scalarmultKey: [[OUT]] aG", (char*)aG_x.bytes, 32);       
         #endif
 
         int offset = set_command_header_noopt(INS_SECRET_SCAL_MUL_BASE);
@@ -838,7 +918,7 @@ namespace hw {
       if ((this->mode == TRANSACTION_PARSE)  && has_view_key) {
         //A derivation is resquested in PASRE mode and we have the view key,
         //so do that wihtout the device and return the derivation unencrypted.
-        MDEBUG( "generate_key_derivation  : PARSE mode with known viewkey");
+        MDEBUG( "generate_key_derivation  : PARSE mode with known viewkey");     
         //Note derivation in PARSE mode can only happen with viewkey, so assert it!
         assert(is_fake_view_key(sec));
         r = crypto::generate_key_derivation(pub, this->viewkey, derivation);
@@ -875,7 +955,7 @@ namespace hw {
 
     bool device_ledger::conceal_derivation(crypto::key_derivation &derivation, const crypto::public_key &tx_pub_key, const std::vector<crypto::public_key> &additional_tx_pub_keys, const crypto::key_derivation &main_derivation, const std::vector<crypto::key_derivation> &additional_derivations) {
       const crypto::public_key *pkey=NULL;
-      if (derivation == main_derivation) {
+      if (derivation == main_derivation) {        
         pkey = &tx_pub_key;
         MDEBUG("conceal derivation with main tx pub key");
       } else {
@@ -889,7 +969,7 @@ namespace hw {
       }
       ASSERT_X(pkey, "Mismatched derivation on scan info");
       return this->generate_key_derivation(*pkey,  crypto::null_skey, derivation);
-    }
+    } 
 
     bool device_ledger::derivation_to_scalar(const crypto::key_derivation &derivation, const size_t output_index, crypto::ec_scalar &res) {
         AUTO_LOCK_CMD();
@@ -976,7 +1056,7 @@ namespace hw {
 
     bool device_ledger::derive_public_key(const crypto::key_derivation &derivation, const std::size_t output_index, const crypto::public_key &pub, crypto::public_key &derived_pub){
         AUTO_LOCK_CMD();
-
+      
         #ifdef DEBUG_HWDEVICE
         const crypto::key_derivation derivation_x   = hw::ledger::decrypt(derivation);
         const std::size_t            output_index_x = output_index;
@@ -1107,7 +1187,7 @@ namespace hw {
         this->exchange();
 
         memmove(tx_key.data, &this->buffer_recv[32], 32);
-
+  
         return true;
     }
 
@@ -1274,7 +1354,7 @@ namespace hw {
         this->exchange();
 
         //pseudoOuts
-        if ((type == rct::RCTTypeSimple) || (type == rct::RCTTypeSimpleBulletproof)) {
+        if ((type == rct::RCTTypeSimple) || (type == rct::RCTTypeBulletproof)) {
           for ( i = 0; i < inputs_size; i++) {
             offset = set_command_header(INS_VALIDATE, 0x01, i+2);
             //options
@@ -1559,9 +1639,9 @@ namespace hw {
       }
       registry.insert(std::make_pair("Ledger", std::unique_ptr<device>(legder_device)));
     }
-
+  
   #else //WITH_DEVICE_LEDGER
-
+  
     void register_all(std::map<std::string, std::unique_ptr<device>> &registry) {
     }
 
@@ -1569,3 +1649,4 @@ namespace hw {
 
   }
 }
+

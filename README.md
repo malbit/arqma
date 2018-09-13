@@ -75,15 +75,14 @@ library archives (`.a`).
 | GTest        | 1.5           | YES      | `libgtest-dev`^    | `gtest`      | `gtest-devel`     | YES      | Test suite     |
 | Doxygen      | any           | NO       | `doxygen`          | `doxygen`    | `doxygen`         | YES      | Documentation  |
 | Graphviz     | any           | NO       | `graphviz`         | `graphviz`   | `graphviz`        | YES      | Documentation  |
-| libhidapi    | ?             | NO       | `libhidapi-dev`    | ?            | `libhidapi-dev`   | NO       | Ledger         |     
-| libhidapi    | ?             | NO       | `libhidapi-libusb0`| ?            | `libhidapi-libusb0`| NO      | ledger         |     
+| pcsclite     | ?             | NO       | `libpcsclite-dev`  | ?            | `pcsc-lite pcsc-lite-devel` | NO | Ledger     |
 
 
 [^] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
 build the library binary manually. This can be done with the following command ```sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/ ```
 
 Debian / Ubuntu one liner for all dependencies  
-``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libhidapi-dev libhidapi-libusb0  ```
+``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpcsclite-dev libpgm-dev```
 
 ### Cloning the repository
 
@@ -162,7 +161,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 ```
         git clone https://github.com/arqma/arqma.git
 	cd arqma
-	git checkout tags/v0.11.1.0
+	git checkout tags/v0.1.2.6
 ```
 * Build:
 ```
@@ -196,9 +195,9 @@ If you are using the older Raspbian Jessie image, compiling ArQmA is a bit more 
 * Install the latest version of boost (this may first require invoking `apt-get remove --purge libboost*` to remove a previous version if you're not using a clean install):
 ```
 	cd  
-	wget https://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.bz2  
-	tar xvfo boost_1_64_0.tar.bz2  
-	cd boost_1_64_0  
+	wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2  
+	tar xvfo boost_1_68_0.tar.bz2  
+	cd boost_1_68_0  
 	./bootstrap.sh  
 	sudo ./b2  
 ```

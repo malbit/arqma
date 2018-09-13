@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-//
+// 
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-//
+// 
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-//
+// 
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-//
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -48,12 +48,11 @@
 #include "crypto/chacha.h"
 #include "ringct/rctTypes.h"
 
-
 #ifndef USE_DEVICE_LEDGER
 #define USE_DEVICE_LEDGER 1
 #endif
 
-#if !defined(HAVE_HIDAPI)
+#if !defined(HAVE_PCSC) 
 #undef  USE_DEVICE_LEDGER
 #define USE_DEVICE_LEDGER 0
 #endif
@@ -115,7 +114,7 @@ namespace hw {
 
         /* ======================================================================= */
         /*  LOCKER                                                                 */
-        /* ======================================================================= */
+        /* ======================================================================= */ 
         virtual void lock(void) = 0;
         virtual void unlock(void) = 0;
         virtual bool try_lock(void) = 0;
@@ -126,7 +125,7 @@ namespace hw {
         /* ======================================================================= */
         virtual bool  get_public_address(cryptonote::account_public_address &pubkey) = 0;
         virtual bool  get_secret_keys(crypto::secret_key &viewkey , crypto::secret_key &spendkey)  = 0;
-        virtual bool  generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key) = 0;
+        virtual bool  generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key, uint64_t kdf_rounds) = 0;
 
         /* ======================================================================= */
         /*                               SUB ADDRESS                               */
@@ -205,3 +204,4 @@ namespace hw {
 
     device& get_device(const std::string device_descriptor) ;
 }
+
