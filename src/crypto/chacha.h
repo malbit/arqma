@@ -92,3 +92,5 @@ namespace crypto {
     return generate_chacha_key(password.data(), password.size(), key, kdf_rounds);
   }
 }
+
+#endif
