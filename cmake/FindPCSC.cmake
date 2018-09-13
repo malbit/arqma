@@ -17,23 +17,17 @@ IF (NOT WIN32)
 
   FIND_PATH(PCSC_INCLUDE_DIR winscard.h
     HINTS
-    IF (WIN32)
-    ${MSYS2_FOLDER}/mingw64/x86_64-w64-mingw32/include
-    ENDIF (WIN32)
     /usr/include/PCSC
     ${PC_PCSC_INCLUDEDIR}
     ${PC_PCSC_INCLUDE_DIRS}
     PATH_SUFFIXES PCSC
-    )
+  )
 
   FIND_LIBRARY(PCSC_LIBRARY NAMES pcsclite libpcsclite PCSC
     HINTS
-    IF (WIN32)
-    ${MSYS2_FOLDER}/mingw64/x86_64-w64-mingw32/lib
-    ENDIF (WIN32)
     ${PC_PCSC_LIBDIR}
     ${PC_PCSC_LIBRARY_DIRS}
-    )
+  )
 
 ELSE (NOT WIN32)
   IF(BUILD_64 STREQUAL "ON")
@@ -45,7 +39,7 @@ ELSE (NOT WIN32)
   ENDIF(BUILD_64 STREQUAL "ON")
 ENDIF (NOT WIN32)
 
-# handle the QUIETLY and REQUIRED arguments and set PCSC_FOUND to TRUE if 
+# handle the QUIETLY and REQUIRED arguments and set PCSC_FOUND to TRUE if
 # all listed variables are TRUE
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(PCSC DEFAULT_MSG PCSC_LIBRARY PCSC_INCLUDE_DIR)
