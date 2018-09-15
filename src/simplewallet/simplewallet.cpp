@@ -3700,8 +3700,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
 
   try
   {
-    bool create_address_file = command_line::get_arg(vm, arg_create_address_file);
-    m_wallet->restore(m_wallet_file, std::move(rc.second).password(), device_name, create_address_file);
+    m_wallet->restore(m_wallet_file, std::move(rc.second).password(), device_name);
     message_writer(console_color_white, true) << tr("Generated new wallet on hw device: ")
       << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
   }
@@ -4293,8 +4292,6 @@ bool simple_wallet::show_balance_unlocked(bool detailed)
   std::string extra;
   if (m_wallet->has_multisig_partial_key_images())
     extra = tr(" (Some owned outputs have partial key images - import_multisig_info needed)");
-  else if (m_wallet->has_unknown_key_images())
-    extra += tr(" (Some owned outputs have missing key images - import_key_images needed)");
   success_msg_writer() << tr("Currently selected account: [") << m_current_subaddress_account << tr("] ") << m_wallet->get_subaddress_label({m_current_subaddress_account, 0});
   const std::string tag = m_wallet->get_account_tags().second[m_current_subaddress_account];
   success_msg_writer() << tr("Tag: ") << (tag.empty() ? std::string{tr("(No tag assigned)")} : tag);
