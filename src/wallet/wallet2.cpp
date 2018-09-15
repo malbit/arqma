@@ -8525,7 +8525,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_all(uint64_t below
     }
   }
 
-  return create_transactions_from(address, is_subaddress, unused_transfers_indices, unused_dust_indices, fake_outs_count, unlock_time, priority, extra, trusted_daemon);
+  return create_transactions_from(address, is_subaddress, unused_transfers_indices, unused_dust_indices, fake_outs_count, unlock_time, priority, extra);
 }
 
 std::vector<wallet2::pending_tx> wallet2::create_transactions_single(const crypto::key_image &ki, const cryptonote::account_public_address &address, bool is_subaddress, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra)
@@ -8860,7 +8860,7 @@ std::vector<size_t> wallet2::select_available_mixable_outputs()
 {
   // request all outputs with at least 3 instances, so we can use mixin 2 with
   const size_t min_mixin = use_fork_rules(7, 10) ? 6 : use_fork_rules(6, 10) ? 4 : 2; // v6 increases min mixin from 2 to 4, v7 to 6
-  return select_available_outputs_from_histogram(min_mixin + 1, true, true, true, trusted_daemon);
+  return select_available_outputs_from_histogram(min_mixin + 1, true, true, true);
 }
 //----------------------------------------------------------------------------------------------------
 std::vector<wallet2::pending_tx> wallet2::create_unmixable_sweep_transactions()
