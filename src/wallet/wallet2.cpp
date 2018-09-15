@@ -234,7 +234,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   {
     daemon_port = testnet ? config::testnet::RPC_DEFAULT_PORT : stagenet ? config::stagenet::RPC_DEFAULT_PORT : config::RPC_DEFAULT_PORT;
   }
-
+  
   if (daemon_address.empty())
     daemon_address = std::string("http://") + daemon_host + ":" + std::to_string(daemon_port);
 
