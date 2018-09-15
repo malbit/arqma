@@ -145,7 +145,7 @@ namespace cryptonote
     bool set_daemon(const std::vector<std::string> &args);
     bool save_bc(const std::vector<std::string> &args);
     bool refresh(const std::vector<std::string> &args);
-    bool show_balance_unlocked(bool detailed = true);
+    bool show_balance_unlocked(bool detailed = false);
     bool show_balance(const std::vector<std::string> &args = std::vector<std::string>());
     bool show_incoming_transfers(const std::vector<std::string> &args);
     bool show_payments(const std::vector<std::string> &args);
@@ -189,16 +189,7 @@ namespace cryptonote
     bool show_transfers(const std::vector<std::string> &args);
     bool unspent_outputs(const std::vector<std::string> &args);
     bool rescan_blockchain(const std::vector<std::string> &args);
-    /** refresh the wallet
-	 *
-	 * Rebuild the internal block structure and recalculate the wallet amount.
-	 *
-	 * @param start_height the block height where the amount received payments is started
-	 * @param reset if true the internal data structures will be reset and rebuild from scratch
-	 * @param is_init prints a account overview e.g. the balance and unlocked balance
-	 * @param use_optimized_height if true the refresh process used a internal optimized start height and skip older blocks
-	 */
-  	bool refresh_main(uint64_t start_height, bool reset = false, bool is_init = false, bool use_optimized_height = true);
+    bool refresh_main(uint64_t start_height, bool reset = false, bool is_init = false);
     bool set_tx_note(const std::vector<std::string> &args);
     bool get_tx_note(const std::vector<std::string> &args);
     bool set_description(const std::vector<std::string> &args);
@@ -242,7 +233,6 @@ namespace cryptonote
     bool print_ring_members(const std::vector<tools::wallet2::pending_tx>& ptx_vector, std::ostream& ostr);
     std::string get_prompt() const;
     bool print_seed(bool encrypted);
-    bool is_daemon_trusted() const { return *m_trusted_daemon; }
 
     /*!
      * \brief Prints the seed with a nice message
@@ -346,7 +336,6 @@ namespace cryptonote
     bool m_restore_deterministic_wallet;  // recover flag
     bool m_restore_multisig_wallet;  // recover flag
     bool m_non_deterministic;  // old 2-random generation
-    boost::optional<bool> m_trusted_daemon;
     bool m_allow_mismatched_daemon_version;
     bool m_restoring;           // are we restoring, by whatever method?
     uint64_t m_restore_height;  // optional

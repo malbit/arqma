@@ -562,6 +562,17 @@ if (NOT WIN32)
   add_cxx_flag_if_supported(-fstack-protector-strong CXX_SECURITY_FLAGS)
 endif()
 
+# New in GCC 8.2
+   if (NOT WIN32)
+     add_c_flag_if_supported(-fcf-protection=full C_SECURITY_FLAGS)
+     add_cxx_flag_if_supported(-fcf-protection=full CXX_SECURITY_FLAGS)
+     add_c_flag_if_supported(-fstack-clash-protection C_SECURITY_FLAGS)
+    add_cxx_flag_if_supported(-fstack-clash-protection CXX_SECURITY_FLAGS)
+  endif()
+
+  add_c_flag_if_supported(-mmitigate-rop C_SECURITY_FLAGS)
+  add_cxx_flag_if_supported(-mmitigate-rop CXX_SECURITY_FLAGS)
+
   # linker
   if (NOT WIN32)
     # Windows binaries die on startup with PIE
