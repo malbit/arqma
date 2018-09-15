@@ -425,9 +425,9 @@ namespace
     return r;
   }
 
-  void handle_transfer_exception(const std::exception_ptr &e)
+  void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon)
   {
-    bool warn_of_possible_attack = false;
+    bool warn_of_possible_attack = !trusted_daemon;
     try
     {
       std::rethrow_exception(e);
