@@ -445,7 +445,7 @@ namespace
       LOG_ERROR("RPC error: " << e.to_string());
       fail_msg_writer() << tr("RPC error: ") << e.what();
     }
-    catch (const tools::error::get_outs_error &e)
+    catch (const tools::error::get_random_outs_error &e)
     {
       fail_msg_writer() << tr("failed to get random outputs to mix: ") << e.what();
     }
@@ -829,24 +829,21 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
     fail_msg_writer() << tr("Cannot connect to daemon");
     return true;
   }
-  const bool per_byte = m_wallet->use_fork_rules(HF_VERSION_PER_BYTE_FEE);
-  const uint64_t base_fee = m_wallet->get_base_fee();
-  const char *base = per_byte ? "byte" : "kB";
-  const uint64_t typical_size = per_byte ? 2500 : 13;
-  const uint64_t size_granularity = per_byte ? 1 : 1024;
-  message_writer() << (boost::format(tr("Current fee is %s %s per %s")) % print_money(base_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % base).str();
+  const uint64_t per_kb_fee = m_wallet->get_per_kb_fee();
+  const uint64_t typical_size_kb = 13;
+  message_writer() << (boost::format(tr("Current fee is %s %s per kB")) % print_money(per_kb_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point())).str();
 
   std::vector<uint64_t> fees;
   for (uint32_t priority = 1; priority <= 4; ++priority)
   {
     uint64_t mult = m_wallet->get_fee_multiplier(priority);
-    fees.push_back(base_fee * typical_size * mult);
+    fees.push_back(per_kb_fee * typical_size_kb * mult);
   }
   std::vector<std::pair<uint64_t, uint64_t>> blocks;
   try
   {
-    uint64_t base_size = typical_size * size_granularity;
-    blocks = m_wallet->estimate_backlog(base_size, base_size + size_granularity - 1, fees);
+    uint64_t base_size = typical_size_kb * 1024;
+    blocks = m_wallet->estimate_backlog(base_size, base_size + 1023, fees);
   }
   catch (const std::exception &e)
   {
@@ -1555,7 +1552,7 @@ bool simple_wallet::set_ring(const std::vector<std::string> &args)
 
   if (args.size() < 3)
   {
-    fail_msg_writer() << tr("usage: set_ring <filename> | ( <key_image> absolute|relative <index> [<index>...] )");
+    fail_msg_writer() << tr("usage: set_ring <key_image> absolute|relative <index> [<index>...]");
     return true;
   }
 
@@ -1627,23 +1624,23 @@ bool simple_wallet::set_ring(const std::vector<std::string> &args)
 
 bool simple_wallet::blackball(const std::vector<std::string> &args)
 {
-  uint64_t amount = std::numeric_limits<uint64_t>::max(), offset, num_offsets;
+  crypto::public_key output;
   if (args.size() == 0)
   {
-    fail_msg_writer() << tr("usage: blackball <amount>/<offset> | <filename> [add]");
+    fail_msg_writer() << tr("usage: blackball <output_public_key> | <filename> [add]");
     return true;
   }
 
   try
   {
-    if (sscanf(args[0].c_str(), "%" PRIu64 "/%" PRIu64, &amount, &offset) == 2)
+    if (epee::string_tools::hex_to_pod(args[0], output))
     {
-      m_wallet->blackball_output(std::make_pair(amount, offset));
+      m_wallet->blackball_output(output);
     }
     else if (epee::file_io_utils::is_file_exist(args[0]))
     {
-      std::vector<std::pair<uint64_t, uint64_t>> outputs;
-      char str[256];
+      std::vector<crypto::public_key> outputs;
+      char str[65];
 
       std::unique_ptr<FILE, tools::close_file> f(fopen(args[0].c_str(), "r"));
       if (f)
@@ -1657,27 +1654,10 @@ bool simple_wallet::blackball(const std::vector<std::string> &args)
             str[len - 1] = 0;
           if (!str[0])
             continue;
-          if (sscanf(str, "@%" PRIu64, &amount) == 1)
+          outputs.push_back(crypto::public_key());
+          if (!epee::string_tools::hex_to_pod(str, outputs.back()))
           {
-            continue;
-          }
-          if (amount == std::numeric_limits<uint64_t>::max())
-          {
-            fail_msg_writer() << tr("First line is not an amount");
-            return true;
-          }
-          if (sscanf(str, "%" PRIu64 "*%" PRIu64, &offset, &num_offsets) == 2 && num_offsets <= std::numeric_limits<uint64_t>::max() - offset)
-          {
-            while (num_offsets--)
-              outputs.push_back(std::make_pair(amount, offset++));
-          }
-          else if (sscanf(str, "%" PRIu64, &offset) == 1)
-          {
-            outputs.push_back(std::make_pair(amount, offset));
-          }
-          else
-          {
-            fail_msg_writer() << tr("Invalid output: ") << str;
+            fail_msg_writer() << tr("Invalid public key: ") << str;
             return true;
           }
         }
@@ -1702,7 +1682,7 @@ bool simple_wallet::blackball(const std::vector<std::string> &args)
     }
     else
     {
-      fail_msg_writer() << tr("Invalid output key, and file doesn't exist");
+      fail_msg_writer() << tr("Invalid public key, and file doesn't exist");
       return true;
     }
   }
@@ -1716,16 +1696,16 @@ bool simple_wallet::blackball(const std::vector<std::string> &args)
 
 bool simple_wallet::unblackball(const std::vector<std::string> &args)
 {
-  std::pair<uint64_t, uint64_t> output;
+  crypto::public_key output;
   if (args.size() != 1)
   {
-    fail_msg_writer() << tr("usage: unblackball <amount>/<offset>");
+    fail_msg_writer() << tr("usage: unblackball <output_public_key>");
     return true;
   }
 
-  if (sscanf(args[0].c_str(), "%" PRIu64 "/%" PRIu64, &output.first, &output.second) != 2)
+  if (!epee::string_tools::hex_to_pod(args[0], output))
   {
-    fail_msg_writer() << tr("Invalid output");
+    fail_msg_writer() << tr("Invalid public key");
     return true;
   }
 
@@ -1743,25 +1723,25 @@ bool simple_wallet::unblackball(const std::vector<std::string> &args)
 
 bool simple_wallet::blackballed(const std::vector<std::string> &args)
 {
-  std::pair<uint64_t, uint64_t> output;
+  crypto::public_key output;
   if (args.size() != 1)
   {
-    fail_msg_writer() << tr("usage: blackballed <amount>/<offset>");
+    fail_msg_writer() << tr("usage: blackballed <output_public_key>");
     return true;
   }
 
-  if (sscanf(args[0].c_str(), "%" PRIu64 "/%" PRIu64, &output.first, &output.second) != 2)
+  if (!epee::string_tools::hex_to_pod(args[0], output))
   {
-    fail_msg_writer() << tr("Invalid output");
+    fail_msg_writer() << tr("Invalid public key");
     return true;
   }
 
   try
   {
     if (m_wallet->is_output_blackballed(output))
-      message_writer() << tr("Blackballed: ") << output.first << "/" << output.second;
+      message_writer() << tr("Blackballed: ") << output;
     else
-      message_writer() << tr("not blackballed: ") << output.first << "/" << output.second;
+      message_writer() << tr("not blackballed: ") << output;
   }
   catch (const std::exception &e)
   {
@@ -2582,15 +2562,15 @@ simple_wallet::simple_wallet()
                            tr("Save known rings to the shared rings database"));
   m_cmd_binder.set_handler("blackball",
                            boost::bind(&simple_wallet::blackball, this, _1),
-                           tr("blackball <amount>/<offset> | <filename> [add]"),
+                           tr("blackball <output public key> | <filename> [add]"),
                            tr("Blackball output(s) so they never get selected as fake outputs in a ring"));
   m_cmd_binder.set_handler("unblackball",
                            boost::bind(&simple_wallet::unblackball, this, _1),
-                           tr("unblackball <amount>/<offset>"),
+                           tr("unblackball <output public key>"),
                            tr("Unblackballs an output so it may get selected as a fake output in a ring"));
   m_cmd_binder.set_handler("blackballed",
                            boost::bind(&simple_wallet::blackballed, this, _1),
-                           tr("blackballed <amount>/<offset>"),
+                           tr("blackballed <output public key>"),
                            tr("Checks whether an output is blackballed"));
   m_cmd_binder.set_handler("version",
                            boost::bind(&simple_wallet::version, this, _1),
