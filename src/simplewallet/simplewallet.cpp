@@ -425,9 +425,9 @@ namespace
     return r;
   }
 
-  void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon)
+  void handle_transfer_exception(const std::exception_ptr &e)
   {
-    bool warn_of_possible_attack = !trusted_daemon;
+    bool warn_of_possible_attack = false;
     try
     {
       std::rethrow_exception(e);
@@ -2730,7 +2730,7 @@ bool simple_wallet::set_log(const std::vector<std::string> &args)
       mlog_set_log(args[0].c_str());
     }
   }
-  
+
   success_msg_writer() << "New log categories: " << mlog_get_categories();
   return true;
 }
@@ -3984,7 +3984,7 @@ bool simple_wallet::start_mining(const std::vector<std::string>& args)
     fail_msg_writer() << tr("wallet is null");
     return true;
   }
-  COMMAND_RPC_START_MINING::request req = AUTO_VAL_INIT(req); 
+  COMMAND_RPC_START_MINING::request req = AUTO_VAL_INIT(req);
   req.miner_address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
 
   bool ok = true;
@@ -4851,7 +4851,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     }
     else
     {
-      if (boost::starts_with(local_args[i], "monero:"))
+      if (boost::starts_with(local_args[i], "arq:"))
         fail_msg_writer() << tr("Invalid last argument: ") << local_args.back() << ": " << error;
       else
         fail_msg_writer() << tr("Invalid last argument: ") << local_args.back();
@@ -5041,7 +5041,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
             print_money(total_fee);
         }
         if (dust_in_fee != 0) prompt << boost::format(tr(", of which %s is dust from change")) % print_money(dust_in_fee);
-        if (dust_not_in_fee != 0)  prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address")) 
+        if (dust_not_in_fee != 0)  prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address"))
                                                    % print_money(dust_not_in_fee);
         if (transfer_type == TransferLocked)
         {
