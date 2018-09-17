@@ -2499,7 +2499,7 @@ namespace tools
     }
     try
     {
-      m_wallet->refresh(m_trusted_daemon, req.start_height, res.blocks_fetched, res.received_money);
+      m_wallet->refresh(m_wallet->is_trusted_daemon(), req.start_height, res.blocks_fetched, res.received_money);
       return true;
     }
     catch (const std::exception& e)
