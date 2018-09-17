@@ -234,30 +234,30 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   {
     daemon_port = testnet ? config::testnet::RPC_DEFAULT_PORT : stagenet ? config::stagenet::RPC_DEFAULT_PORT : config::RPC_DEFAULT_PORT;
   }
-  
+
   if (daemon_address.empty())
     daemon_address = std::string("http://") + daemon_host + ":" + std::to_string(daemon_port);
 
-    boost::optional<bool> trusted_daemon;
-    if (!command_line::is_arg_defaulted(vm, opts.trusted_daemon) || !command_line::is_arg_defaulted(vm, opts.untrusted_daemon))
-      trusted_daemon = command_line::get_arg(vm, opts.trusted_daemon) && !command_line::get_arg(vm, opts.untrusted_daemon);
-    THROW_WALLET_EXCEPTION_IF(!command_line::is_arg_defaulted(vm, opts.trusted_daemon) && !command_line::is_arg_defaulted(vm, opts.untrusted_daemon),
-      tools::error::wallet_internal_error, tools::wallet2::tr("--trusted-daemon and --untrusted-daemon are both seen, assuming untrusted"));
+  boost::optional<bool> trusted_daemon;
+  if (!command_line::is_arg_defaulted(vm, opts.trusted_daemon) || !command_line::is_arg_defaulted(vm, opts.untrusted_daemon))
+    trusted_daemon = command_line::get_arg(vm, opts.trusted_daemon) && !command_line::get_arg(vm, opts.untrusted_daemon);
+  THROW_WALLET_EXCEPTION_IF(!command_line::is_arg_defaulted(vm, opts.trusted_daemon) && !command_line::is_arg_defaulted(vm, opts.untrusted_daemon),
+    tools::error::wallet_internal_error, tools::wallet2::tr("--trusted-daemon and --untrusted-daemon are both seen, assuming untrusted"));
 
-    // set --trusted-daemon if local and not overridden
-    if (!trusted_daemon)
+  // set --trusted-daemon if local and not overridden
+  if (!trusted_daemon)
+  {
+    try
     {
-      try
+      trusted_daemon = false;
+      if (tools::is_local_address(daemon_address))
       {
-        trusted_daemon = false;
-        if (tools::is_local_address(daemon_address))
-        {
-          MINFO(tr("Daemon is local, assuming trusted"));
-          trusted_daemon = true;
-        }
+        MINFO(tr("Daemon is local, assuming trusted"));
+        trusted_daemon = true;
       }
-      catch (const std::exception &e) { }
     }
+    catch (const std::exception &e) { }
+  }
 
   std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds));
   wallet->init(unattended, std::move(daemon_address), std::move(login), 0, false, *trusted_daemon);
