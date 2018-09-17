@@ -2026,9 +2026,11 @@ void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks
   {
     drop_from_short_history(short_chain_history, 3);
 
+    THROW_WALLET_EXCEPTION_IF(prev_blocks.size() != prev_parsed_blocks.size(), error::wallet_internal_error, "size mismatch");
+
     // prepend the last 3 blocks, should be enough to guard against a block or two's reorg
     std::vector<parsed_block>::const_reverse_iterator i = prev_parsed_blocks.rbegin();
-    for (size_t n = 0; n < std::min((size_t)3, prev_blocks.size()); ++n)
+    for (size_t n = 0; n < std::min((size_t)3, prev_parsed_blocks.size()); ++n)
     {
       short_chain_history.push_front(i->hash);
       ++i;
@@ -2348,7 +2350,7 @@ void wallet2::fast_refresh(uint64_t stop_height, uint64_t &blocks_start_height, 
     while (missing_blocks-- > 0)
       m_blockchain.push_back(crypto::null_hash); // maybe a bit suboptimal, but deque won't do huge reallocs like vector
     m_blockchain.push_back(m_checkpoints.get_points().at(checkpoint_height));
-    m_local_bc_height = m_blockchain.size();
+    m_blockchain.trim(checkpoint_height);
     short_chain_history.clear();
     get_short_chain_history(short_chain_history);
   }
@@ -2561,10 +2563,6 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
         break;
       }
 
-      // switch to the new blocks from the daemon
-      blocks_start_height = next_blocks_start_height;
-      blocks = std::move(next_blocks);
-      parsed_blocks = std::move(next_parsed_blocks);
       first = false;
 
       // handle error from async fetching thread
@@ -2572,6 +2570,11 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
       {
         throw std::runtime_error("proxy exception in refresh thread");
       }
+
+      // switch to the new blocks from the daemon
+      blocks_start_height = next_blocks_start_height;
+      blocks = std::move(next_blocks);
+      parsed_blocks = std::move(next_parsed_blocks);
     }
     catch (const tools::error::password_needed&)
     {
