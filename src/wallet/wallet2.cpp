@@ -825,7 +825,7 @@ std::unique_ptr<wallet2> wallet2::make_dummy(const boost::program_options::varia
 }
 
 //----------------------------------------------------------------------------------------------------
-bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_weight_limit, bool ssl, bool trusted_daemon)
+bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_size_limit, bool ssl, bool trusted_daemon)
 {
   m_checkpoints.init_default_checkpoints(m_nettype);
   if(m_http_client.is_connected())
