@@ -181,7 +181,7 @@ public:
 
   virtual std::vector<std::string> get_filenames() const;
 
-  virtual bool remove_data_file(const std::string& folder) const
+  virtual bool remove_data_file(const std::string& folder) const;
 
   virtual std::string get_db_name() const;
 
