@@ -113,12 +113,12 @@ using namespace cryptonote;
 
 #define OUTPUT_EXPORT_FILE_MAGIC "ArQmA output export\003"
 
-#define SEGREGATION_FORK_HEIGHT 3000
+#define SEGREGATION_FORK_HEIGHT 100
 #define TESTNET_SEGREGATION_FORK_HEIGHT 100
 #define STAGENET_SEGREGATION_FORK_HEIGHT 100
 #define SEGREGATION_FORK_VICINITY 50 /* blocks */
 
-#define FIRST_REFRESH_GRANULARITY     1024
+#define FIRST_REFRESH_GRANULARITY     256
 
 static const std::string MULTISIG_SIGNATURE_MAGIC = "SigMultisigPkV1";
 
@@ -259,8 +259,8 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
     catch (const std::exception &e) { }
   }
 
-  std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds));
-  wallet->init(unattended, std::move(daemon_address), std::move(login), 0, false, *trusted_daemon);
+  std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds, unattended));
+  wallet->init(std::move(daemon_address), std::move(login), 0, false, *trusted_daemon);
   boost::filesystem::path ringdb_path = command_line::get_arg(vm, opts.shared_ringdb_dir);
   wallet->set_ring_database(ringdb_path.string());
   return wallet;
@@ -701,7 +701,7 @@ wallet_keys_unlocker::~wallet_keys_unlocker()
   w.encrypt_keys(key);
 }
 
-wallet2::wallet2(network_type nettype, uint64_t kdf_rounds):
+wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
   m_multisig_rescan_info(NULL),
   m_multisig_rescan_k(NULL),
   m_run(true),
@@ -749,7 +749,7 @@ wallet2::wallet2(network_type nettype, uint64_t kdf_rounds):
   m_ringdb(),
   m_last_block_reward(0),
   m_encrypt_keys_after_refresh(boost::none),
-  m_unattended(false)
+  m_unattended(unattended)
 {
 }
 
@@ -825,9 +825,8 @@ std::unique_ptr<wallet2> wallet2::make_dummy(const boost::program_options::varia
 }
 
 //----------------------------------------------------------------------------------------------------
-bool wallet2::init(bool unattended, std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_size_limit, bool ssl, bool trusted_daemon)
+bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_weight_limit, bool ssl, bool trusted_daemon)
 {
-  m_unattended = unattended;
   m_checkpoints.init_default_checkpoints(m_nettype);
   if(m_http_client.is_connected())
     m_http_client.disconnect();
@@ -10715,7 +10714,12 @@ size_t wallet2::import_multisig(std::vector<cryptonote::blobdata> blobs)
 
     refresh(false);
   }
-  catch (...) {}
+  catch (...)
+  {
+    m_multisig_rescan_info = NULL;
+    m_multisig_rescan_k = NULL;
+    throw;
+  }
   m_multisig_rescan_info = NULL;
   m_multisig_rescan_k = NULL;
 
