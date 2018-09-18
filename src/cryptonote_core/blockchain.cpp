@@ -94,6 +94,7 @@ static const struct {
   { 7, 1, 0, 1528750800 },
   { 8, 100, 0, 1528751200 },
   { 9, 7000, 0, 1530320400 },
+  { 10, 60000, 0, 1546300800 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
@@ -108,6 +109,7 @@ static const struct {
   { 7, 1, 0, 1528750800 },
   { 8, 10, 0, 1528751200 },
   { 9, 20, 0, 1530248400 },
+  { 10, 1000, 0, 1538352000 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 1;
 
@@ -122,7 +124,9 @@ static const struct {
   { 7, 1, 0, 1528750800 },
   { 8, 100, 0, 1528751200 },
   { 9, 200, 0, 1530248400 },
+  { 10, 10000, 0, 1538352000 },
 };
+static const uint64_t stagenet_hard_fork_version_1_till = 1;
 
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
@@ -328,7 +332,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1, 0);
+      m_hardfork = new HardFork(*db, 1, stagenet_hard_fork_version_1_till);
     else if (m_nettype == TESTNET)
       m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till);
     else
@@ -1775,9 +1779,9 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   {
     switch (m_nettype)
     {
-      case STAGENET: start_height = stagenet_hard_forks[3].height; break;
-      case TESTNET: start_height = testnet_hard_forks[3].height; break;
-      case MAINNET: start_height = mainnet_hard_forks[3].height; break;
+      case STAGENET: start_height = stagenet_hard_forks[7].height; break;
+      case TESTNET: start_height = testnet_hard_forks[7].height; break;
+      case MAINNET: start_height = mainnet_hard_forks[7].height; break;
       default: return false;
     }
   }
@@ -1804,15 +1808,10 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   {
     std::vector<uint64_t> heights;
     heights.reserve(to_height + 1 - start_height);
-    uint64_t real_start_height = start_height > 0 ? start_height-1 : start_height;
-    for (uint64_t h = real_start_height; h <= to_height; ++h)
+    for (uint64_t h = start_height; h <= to_height; ++h)
       heights.push_back(h);
     distribution = m_db->get_block_cumulative_rct_outputs(heights);
-    if (start_height > 0)
-    {
-      base = distribution[0];
-      distribution.erase(distribution.begin());
-    }
+    base = 0;
     return true;
   }
   else
@@ -2464,7 +2463,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : hf_version >= HF_VERSION_MIN_MIXIN_4 ? 4 : 2;
+    const size_t min_mixin = HF_VERSION_MIXIN_7;
     for (const auto& txin : tx.vin)
     {
       // non txin_to_key inputs will be rejected below
