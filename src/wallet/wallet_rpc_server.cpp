@@ -160,8 +160,13 @@ namespace tools
     std::string bind_port = command_line::get_arg(*m_vm, arg_rpc_bind_port);
     const bool disable_auth = command_line::get_arg(*m_vm, arg_disable_rpc_login);
     m_restricted = command_line::get_arg(*m_vm, arg_restricted);
-    if (command_line::has_arg(*m_vm, arg_wallet_dir))
+    if (!command_line::is_arg_defaulted(*m_vm, arg_wallet_dir))
     {
+      if (!command_line::is_arg_defaulted(*m_vm, wallet_args::arg_wallet_file()))
+      {
+        MERROR(arg_wallet_dir.name << " and " << wallet_args::arg_wallet_file().name << " are incompatible, use only one of them");
+        return false;
+      }
       m_wallet_dir = command_line::get_arg(*m_vm, arg_wallet_dir);
 #ifdef _WIN32
 #define MKDIR(path, mode)    mkdir(path)
@@ -2672,17 +2677,17 @@ namespace tools
 
     if (m_wallet)
     {
-     try
+      try
       {
         m_wallet->store();
       }
-       catch (const std::exception& e)
+      catch (const std::exception& e)
       {
         handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
         return false;
-       }
-       delete m_wallet;
-     }
+      }
+      delete m_wallet;
+    }
     m_wallet = wal.release();
     return true;
   }
@@ -2742,39 +2747,39 @@ namespace tools
 
     if (m_wallet)
     {
-     try
-    {
-      m_wallet->store();
-    }
+      try
+      {
+        m_wallet->store();
+      }
       catch (const std::exception& e)
       {
         handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
         return false;
       }
       delete m_wallet;
-     }
+    }
     m_wallet = wal.release();
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_close_wallet(const wallet_rpc::COMMAND_RPC_CLOSE_WALLET::request& req, wallet_rpc::COMMAND_RPC_CLOSE_WALLET::response& res, epee::json_rpc::error& er)
-   {
-     if (!m_wallet) return not_open(er);
+  {
+    if (!m_wallet) return not_open(er);
 
-     try
-     {
-       m_wallet->store();
-     }
-     catch (const std::exception& e)
-     {
-       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-       return false;
-     }
-     delete m_wallet;
-     m_wallet = NULL;
-     return true;
-   }
-   //------------------------------------------------------------------------------------------------------------------------------
+    try
+    {
+      m_wallet->store();
+    }
+    catch (const std::exception& e)
+    {
+      handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+      return false;
+    }
+    delete m_wallet;
+    m_wallet = NULL;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_change_wallet_password(const wallet_rpc::COMMAND_RPC_CHANGE_WALLET_PASSWORD::request& req, wallet_rpc::COMMAND_RPC_CHANGE_WALLET_PASSWORD::response& res, epee::json_rpc::error& er)
   {
     if (!m_wallet) return not_open(er);

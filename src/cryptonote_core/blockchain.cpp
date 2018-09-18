@@ -127,9 +127,10 @@ static const struct {
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_sz_limit(0), m_current_block_cumul_sz_median(0),
-  m_enforce_dns_checkpoints(false), m_max_prepare_blocks_threads(4), m_db_blocks_per_sync(1), m_db_sync_mode(db_async), m_db_default_sync(false), m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_cancel(false),
+  m_enforce_dns_checkpoints(false), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false), m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
-  m_difficulty_for_next_block(1)
+  m_difficulty_for_next_block(1),
+  m_btc_valid(false)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
 }
@@ -603,6 +604,7 @@ block Blockchain::pop_block_from_blockchain()
 
   update_next_cumulative_size_limit();
   m_tx_pool.on_blockchain_dec(m_db->height()-1, get_tail_id());
+  invalidate_block_template_cache();
 
   return popped_block;
 }
@@ -613,6 +615,7 @@ bool Blockchain::reset_and_set_genesis_block(const block& b)
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   m_timestamps_and_difficulties_height = 0;
   m_alternative_chains.clear();
+  invalidate_block_template_cache();
   m_db->reset();
   m_hardfork->init();
 
@@ -1193,9 +1196,26 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   LOG_PRINT_L3("Blockchain::" << __func__);
   size_t median_size;
   uint64_t already_generated_coins;
+  uint64_t pool_cookie;
 
   CRITICAL_REGION_BEGIN(m_blockchain_lock);
   height = m_db->height();
+  if (m_btc_valid) {
+    // The pool cookie is atomic. The lack of locking is OK, as if it changes
+    // just as we compare it, we'll just use a slightly old template, but
+    // this would be the case anyway if we'd lock, and the change happened
+    // just after the block template was created
+    if (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address)) && m_btc_nonce == ex_nonce && m_btc_pool_cookie == m_tx_pool.cookie()) {
+      MDEBUG("Using cached template");
+      m_btc.timestamp = time(NULL); // update timestamp unconditionally
+      b = m_btc;
+      diffic = m_btc_difficulty;
+      expected_reward = m_btc_expected_reward;
+      return true;
+    }
+    MDEBUG("Not using cached template: address " << (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address))) << ", nonce " << (m_btc_nonce == ex_nonce) << ", cookie " << (m_btc_pool_cookie == m_tx_pool.cookie()));
+    invalidate_block_template_cache();
+  }
 
   b.major_version = m_hardfork->get_current_version();
   b.minor_version = m_hardfork->get_ideal_version();
@@ -1234,6 +1254,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   {
     return false;
   }
+  pool_cookie = m_tx_pool.cookie();
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
   size_t real_txs_size = 0;
   uint64_t real_fee = 0;
@@ -1348,6 +1369,8 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
     MDEBUG("Creating block template: miner tx size " << coinbase_blob_size <<
         ", cumulative size " << cumulative_size << " is now good");
 #endif
+
+    cache_block_template(b, miner_address, ex_nonce, diffic, expected_reward, pool_cookie);
     return true;
   }
   LOG_ERROR("Failed to create_block_template with " << 10 << " tries");
@@ -1686,17 +1709,6 @@ size_t Blockchain::get_alternative_blocks_count() const
 //------------------------------------------------------------------
 // This function adds the output specified by <amount, i> to the result_outs container
 // unlocked and other such checks should be done by here.
-void Blockchain::add_out_to_get_random_outs(COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::outs_for_amount& result_outs, uint64_t amount, size_t i) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  CRITICAL_REGION_LOCAL(m_blockchain_lock);
-
-  COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry& oen = *result_outs.outs.insert(result_outs.outs.end(), COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry());
-  oen.global_amount_index = i;
-  output_data_t data = m_db->get_output_key(amount, i);
-  oen.out_key = data.pubkey;
-}
-
 uint64_t Blockchain::get_num_mature_outputs(uint64_t amount) const
 {
   uint64_t num_outs = m_db->get_num_outputs(amount);
@@ -1714,243 +1726,12 @@ uint64_t Blockchain::get_num_mature_outputs(uint64_t amount) const
   return num_outs;
 }
 
-std::vector<uint64_t> Blockchain::get_random_outputs(uint64_t amount, uint64_t count) const
-{
-  uint64_t num_outs = get_num_mature_outputs(amount);
-
-  std::vector<uint64_t> indices;
-
-  std::unordered_set<uint64_t> seen_indices;
-
-  // if there aren't enough outputs to mix with (or just enough),
-  // use all of them.  Eventually this should become impossible.
-  if (num_outs <= count)
-  {
-    for (uint64_t i = 0; i < num_outs; i++)
-    {
-      // get tx_hash, tx_out_index from DB
-      tx_out_index toi = m_db->get_output_tx_and_index(amount, i);
-
-      // if tx is unlocked, add output to indices
-      if (is_tx_spendtime_unlocked(m_db->get_tx_unlock_time(toi.first)))
-      {
-        indices.push_back(i);
-      }
-    }
-  }
-  else
-  {
-    // while we still need more mixins
-    while (indices.size() < count)
-    {
-      // if we've gone through every possible output, we've gotten all we can
-      if (seen_indices.size() == num_outs)
-      {
-        break;
-      }
-
-      // get a random output index from the DB.  If we've already seen it,
-      // return to the top of the loop and try again, otherwise add it to the
-      // list of output indices we've seen.
-
-      // triangular distribution over [a,b) with a=0, mode c=b=up_index_limit
-      uint64_t r = crypto::rand<uint64_t>() % ((uint64_t)1 << 53);
-      double frac = std::sqrt((double)r / ((uint64_t)1 << 53));
-      uint64_t i = (uint64_t)(frac*num_outs);
-      // just in case rounding up to 1 occurs after sqrt
-      if (i == num_outs)
-        --i;
-
-      if (seen_indices.count(i))
-      {
-        continue;
-      }
-      seen_indices.emplace(i);
-
-      // get tx_hash, tx_out_index from DB
-      tx_out_index toi = m_db->get_output_tx_and_index(amount, i);
-
-      // if the output's transaction is unlocked, add the output's index to
-      // our list.
-      if (is_tx_spendtime_unlocked(m_db->get_tx_unlock_time(toi.first)))
-      {
-        indices.push_back(i);
-      }
-    }
-  }
-
-  return indices;
-}
-
 crypto::public_key Blockchain::get_output_key(uint64_t amount, uint64_t global_index) const
 {
   output_data_t data = m_db->get_output_key(amount, global_index);
   return data.pubkey;
 }
 
-//------------------------------------------------------------------
-// This function takes an RPC request for mixins and creates an RPC response
-// with the requested mixins.
-// TODO: figure out why this returns boolean / if we should be returning false
-// in some cases
-bool Blockchain::get_random_outs_for_amounts(const COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::request& req, COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::response& res) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  CRITICAL_REGION_LOCAL(m_blockchain_lock);
-
-  // for each amount that we need to get mixins for, get <n> random outputs
-  // from BlockchainDB where <n> is req.outs_count (number of mixins).
-  for (uint64_t amount : req.amounts)
-  {
-    // create outs_for_amount struct and populate amount field
-    COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::outs_for_amount& result_outs = *res.outs.insert(res.outs.end(), COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::outs_for_amount());
-    result_outs.amount = amount;
-
-    std::vector<uint64_t> indices = get_random_outputs(amount, req.outs_count);
-
-    for (auto i : indices)
-    {
-      COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry& oe = *result_outs.outs.insert(result_outs.outs.end(), COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry());
-
-      oe.global_amount_index = i;
-      oe.out_key = get_output_key(amount, i);
-    }
-  }
-  return true;
-}
-//------------------------------------------------------------------
-// This function adds the ringct output at index i to the list
-// unlocked and other such checks should be done by here.
-void Blockchain::add_out_to_get_rct_random_outs(std::list<COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::out_entry>& outs, uint64_t amount, size_t i) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  CRITICAL_REGION_LOCAL(m_blockchain_lock);
-
-  COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::out_entry& oen = *outs.insert(outs.end(), COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::out_entry());
-  oen.amount = amount;
-  oen.global_amount_index = i;
-  output_data_t data = m_db->get_output_key(amount, i);
-  oen.out_key = data.pubkey;
-  oen.commitment = data.commitment;
-}
-//------------------------------------------------------------------
-// This function takes an RPC request for mixins and creates an RPC response
-// with the requested mixins.
-// TODO: figure out why this returns boolean / if we should be returning false
-// in some cases
-bool Blockchain::get_random_rct_outs(const COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::request& req, COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::response& res) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  CRITICAL_REGION_LOCAL(m_blockchain_lock);
-
-  // for each amount that we need to get mixins for, get <n> random outputs
-  // from BlockchainDB where <n> is req.outs_count (number of mixins).
-  auto num_outs = m_db->get_num_outputs(0);
-  // ensure we don't include outputs that aren't yet eligible to be used
-  // outpouts are sorted by height
-  while (num_outs > 0)
-  {
-    const tx_out_index toi = m_db->get_output_tx_and_index(0, num_outs - 1);
-    const uint64_t height = m_db->get_tx_block_height(toi.first);
-    if (height + CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE <= m_db->height())
-      break;
-    --num_outs;
-  }
-
-  std::unordered_set<uint64_t> seen_indices;
-
-  // if there aren't enough outputs to mix with (or just enough),
-  // use all of them.  Eventually this should become impossible.
-  if (num_outs <= req.outs_count)
-  {
-    for (uint64_t i = 0; i < num_outs; i++)
-    {
-      // get tx_hash, tx_out_index from DB
-      tx_out_index toi = m_db->get_output_tx_and_index(0, i);
-
-      // if tx is unlocked, add output to result_outs
-      if (is_tx_spendtime_unlocked(m_db->get_tx_unlock_time(toi.first)))
-      {
-        add_out_to_get_rct_random_outs(res.outs, 0, i);
-      }
-    }
-  }
-  else
-  {
-    // while we still need more mixins
-    while (res.outs.size() < req.outs_count)
-    {
-      // if we've gone through every possible output, we've gotten all we can
-      if (seen_indices.size() == num_outs)
-      {
-        break;
-      }
-
-      // get a random output index from the DB.  If we've already seen it,
-      // return to the top of the loop and try again, otherwise add it to the
-      // list of output indices we've seen.
-
-      // triangular distribution over [a,b) with a=0, mode c=b=up_index_limit
-      uint64_t r = crypto::rand<uint64_t>() % ((uint64_t)1 << 53);
-      double frac = std::sqrt((double)r / ((uint64_t)1 << 53));
-      uint64_t i = (uint64_t)(frac*num_outs);
-      // just in case rounding up to 1 occurs after sqrt
-      if (i == num_outs)
-        --i;
-
-      if (seen_indices.count(i))
-      {
-        continue;
-      }
-      seen_indices.emplace(i);
-
-      // get tx_hash, tx_out_index from DB
-      tx_out_index toi = m_db->get_output_tx_and_index(0, i);
-
-      // if the output's transaction is unlocked, add the output's index to
-      // our list.
-      if (is_tx_spendtime_unlocked(m_db->get_tx_unlock_time(toi.first)))
-      {
-        add_out_to_get_rct_random_outs(res.outs, 0, i);
-      }
-    }
-  }
-
-  if (res.outs.size() < req.outs_count)
-    return false;
-#if 0
-  // if we do not have enough RCT inputs, we can pick from the non RCT ones
-  // which will have a zero mask
-  if (res.outs.size() < req.outs_count)
-  {
-    LOG_PRINT_L0("Out of RCT inputs (" << res.outs.size() << "/" << req.outs_count << "), using regular ones");
-
-    // TODO: arbitrary selection, needs better
-    COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::request req2 = AUTO_VAL_INIT(req2);
-    COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::response res2 = AUTO_VAL_INIT(res2);
-    req2.outs_count = req.outs_count - res.outs.size();
-    static const uint64_t amounts[] = {1, 10, 20, 50, 100, 200, 500, 1000, 10000};
-    for (uint64_t a: amounts)
-      req2.amounts.push_back(a);
-    if (!get_random_outs_for_amounts(req2, res2))
-      return false;
-
-    // pick random ones from there
-    while (res.outs.size() < req.outs_count)
-    {
-      int list_idx = rand() % (sizeof(amounts)/sizeof(amounts[0]));
-      if (!res2.outs[list_idx].outs.empty())
-      {
-        const COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry oe = res2.outs[list_idx].outs.back();
-        res2.outs[list_idx].outs.pop_back();
-        add_out_to_get_rct_random_outs(res.outs, res2.outs[list_idx].amount, oe.global_amount_index);
-      }
-    }
-  }
-#endif
-
-  return true;
-}
 //------------------------------------------------------------------
 bool Blockchain::get_outs(const COMMAND_RPC_GET_OUTPUTS_BIN::request& req, COMMAND_RPC_GET_OUTPUTS_BIN::response& res) const
 {
@@ -2250,7 +2031,8 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
   bool result = find_blockchain_supplement(qblock_ids, resp.m_block_ids, resp.start_height, resp.total_height);
-  resp.cumulative_difficulty = m_db->get_block_cumulative_difficulty(m_db->height() - 1);
+  if (result)
+    resp.cumulative_difficulty = m_db->get_block_cumulative_difficulty(resp.total_height - 1);
 
   return result;
 }
@@ -3688,6 +3470,7 @@ leave:
   // appears to be a NOP *and* is called elsewhere.  wat?
   m_tx_pool.on_blockchain_inc(new_height, id);
   get_difficulty_for_next_block(); // just to cache it
+  invalidate_block_template_cache();
 
   return true;
 }
@@ -3868,11 +3651,13 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
         store_blockchain();
       m_sync_counter = 0;
     }
-    else if (m_db_blocks_per_sync && m_sync_counter >= m_db_blocks_per_sync)
+    else if (m_db_sync_threshold && ((m_db_sync_on_blocks && m_sync_counter >= m_db_sync_threshold) || (!m_db_sync_on_blocks && m_bytes_to_sync >= m_db_sync_threshold)))
     {
+      MDEBUG("Sync threshold met, syncing");
       if(m_db_sync_mode == db_async)
       {
         m_sync_counter = 0;
+        m_bytes_to_sync = 0;
         m_async_service.dispatch(boost::bind(&Blockchain::store_blockchain, this));
       }
       else if(m_db_sync_mode == db_sync)
@@ -4064,6 +3849,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     }
     total_txs += entry.txs.size();
   }
+  m_bytes_to_sync += bytes;
   while (!(stop_batch = m_db->batch_start(blocks_entry.size(), bytes))) {
     m_blockchain_lock.unlock();
     m_tx_pool.unlock();
@@ -4414,7 +4200,7 @@ bool Blockchain::for_all_txpool_txes(std::function<bool(const crypto::hash&, con
   return m_db->for_all_txpool_txes(f, include_blob, include_unrelayed_txes);
 }
 
-void Blockchain::set_user_options(uint64_t maxthreads, uint64_t blocks_per_sync, blockchain_db_sync_mode sync_mode, bool fast_sync)
+void Blockchain::set_user_options(uint64_t maxthreads, bool sync_on_blocks, uint64_t sync_threshold, blockchain_db_sync_mode sync_mode, bool fast_sync)
 {
   if (sync_mode == db_defaultsync)
   {
@@ -4423,7 +4209,8 @@ void Blockchain::set_user_options(uint64_t maxthreads, uint64_t blocks_per_sync,
   }
   m_db_sync_mode = sync_mode;
   m_fast_sync = fast_sync;
-  m_db_blocks_per_sync = blocks_per_sync;
+  m_db_sync_on_blocks = sync_on_blocks;
+  m_db_sync_threshold = sync_threshold;
   m_max_prepare_blocks_threads = maxthreads;
 }
 
@@ -4655,6 +4442,24 @@ bool Blockchain::for_all_outputs(std::function<bool(uint64_t amount, const crypt
 bool Blockchain::for_all_outputs(uint64_t amount, std::function<bool(uint64_t height)> f) const
 {
   return m_db->for_all_outputs(amount, f);;
+}
+
+void Blockchain::invalidate_block_template_cache()
+{
+  MDEBUG("Invalidating block template cache");
+  m_btc_valid = false;
+}
+
+void Blockchain::cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t expected_reward, uint64_t pool_cookie)
+{
+  MDEBUG("Setting block template cache");
+  m_btc = b;
+  m_btc_address = address;
+  m_btc_nonce = nonce;
+  m_btc_difficulty = diff;
+  m_btc_expected_reward = expected_reward;
+  m_btc_pool_cookie = pool_cookie;
+  m_btc_valid = true;
 }
 
 namespace cryptonote {

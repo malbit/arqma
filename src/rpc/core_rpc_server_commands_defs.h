@@ -680,50 +680,6 @@ namespace cryptonote
     };
   };
   //-----------------------------------------------
-  struct COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS
-  {
-    struct request
-    {
-      std::vector<uint64_t> amounts;
-      uint64_t              outs_count;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(amounts)
-        KV_SERIALIZE(outs_count)
-      END_KV_SERIALIZE_MAP()
-    };
-
-#pragma pack (push, 1)
-    struct out_entry
-    {
-      uint64_t global_amount_index;
-      crypto::public_key out_key;
-    };
-#pragma pack(pop)
-
-    struct outs_for_amount
-    {
-      uint64_t amount;
-      std::list<out_entry> outs;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(amount)
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(outs)
-      END_KV_SERIALIZE_MAP()
-    };
-
-    struct response
-    {
-      std::vector<outs_for_amount> outs;
-      std::string status;
-      bool untrusted;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(outs)
-        KV_SERIALIZE(status)
-        KV_SERIALIZE(untrusted)
-      END_KV_SERIALIZE_MAP()
-    };
-  };
-  //-----------------------------------------------
   struct get_outputs_out
   {
     uint64_t amount;
@@ -813,39 +769,6 @@ namespace cryptonote
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(outs)
-        KV_SERIALIZE(status)
-        KV_SERIALIZE(untrusted)
-      END_KV_SERIALIZE_MAP()
-    };
-  };
-
-  struct COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS
-  {
-    struct request
-    {
-      uint64_t outs_count;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(outs_count)
-      END_KV_SERIALIZE_MAP()
-    };
-
-#pragma pack (push, 1)
-    struct out_entry
-    {
-      uint64_t amount;
-      uint64_t global_amount_index;
-      crypto::public_key out_key;
-      rct::key commitment;
-    };
-#pragma pack(pop)
-
-    struct response
-    {
-      std::list<out_entry> outs;
-      std::string status;
-      bool untrusted;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(outs)
         KV_SERIALIZE(status)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
@@ -955,6 +878,7 @@ namespace cryptonote
       bool mainnet;
       bool testnet;
       bool stagenet;
+      std::string nettype;
       std::string top_block_hash;
       uint64_t cumulative_difficulty;
       uint64_t block_size_limit;
@@ -966,6 +890,7 @@ namespace cryptonote
       std::string bootstrap_daemon_address;
       uint64_t height_without_bootstrap;
       bool was_bootstrap_ever_used;
+      uint64_t database_size;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
@@ -984,6 +909,7 @@ namespace cryptonote
         KV_SERIALIZE(mainnet)
         KV_SERIALIZE(testnet)
         KV_SERIALIZE(stagenet)
+        KV_SERIALIZE(nettype)
         KV_SERIALIZE(top_block_hash)
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE(block_size_limit)
@@ -995,6 +921,7 @@ namespace cryptonote
         KV_SERIALIZE(bootstrap_daemon_address)
         KV_SERIALIZE(height_without_bootstrap)
         KV_SERIALIZE(was_bootstrap_ever_used)
+        KV_SERIALIZE(database_size)
       END_KV_SERIALIZE_MAP()
     };
   };
@@ -1514,7 +1441,7 @@ namespace cryptonote
     };
   };
 
-  struct COMMAND_RPC_GET_TRANSACTION_POOL_HASHES
+  struct COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN
   {
     struct request
     {
@@ -1531,6 +1458,28 @@ namespace cryptonote
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(tx_hashes)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
+  struct COMMAND_RPC_GET_TRANSACTION_POOL_HASHES
+  {
+    struct request
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::string status;
+      std::vector<std::string> tx_hashes;
+      bool untrusted;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(tx_hashes)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };

@@ -1,22 +1,22 @@
 // Copyright (c)         2018, The ArQmA Network
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -26,7 +26,7 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
@@ -159,7 +159,7 @@ namespace config
 {
   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder!  Change me!
   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
-  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); 
+  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
   uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -211,5 +211,61 @@ namespace cryptonote
     STAGENET,
     FAKECHAIN,
     UNDEFINED = 255
+  };
+  struct config_t
+  {
+    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
+    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
+    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
+    uint16_t const P2P_DEFAULT_PORT;
+    uint16_t const RPC_DEFAULT_PORT;
+    uint16_t const ZMQ_RPC_DEFAULT_PORT;
+    boost::uuids::uuid const NETWORK_ID;
+    std::string const GENESIS_TX;
+    uint32_t const GENESIS_NONCE;
+  };
+  inline const config_t& get_config(network_type nettype)
+  {
+    static const config_t mainnet = {
+      ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::P2P_DEFAULT_PORT,
+      ::config::RPC_DEFAULT_PORT,
+      ::config::ZMQ_RPC_DEFAULT_PORT,
+      ::config::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE
+    };
+    static const config_t testnet = {
+      ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::testnet::P2P_DEFAULT_PORT,
+      ::config::testnet::RPC_DEFAULT_PORT,
+      ::config::testnet::ZMQ_RPC_DEFAULT_PORT,
+      ::config::testnet::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE
+    };
+    static const config_t stagenet = {
+      ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::stagenet::P2P_DEFAULT_PORT,
+      ::config::stagenet::RPC_DEFAULT_PORT,
+      ::config::stagenet::ZMQ_RPC_DEFAULT_PORT,
+      ::config::stagenet::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE
+    };
+    switch (nettype)
+    {
+      case MAINNET: return mainnet;
+      case TESTNET: return testnet;
+      case STAGENET: return stagenet;
+      case FAKECHAIN: return mainnet;
+      default: throw std::runtime_error("Invalid network type");
+    }
   };
 }

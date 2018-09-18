@@ -193,6 +193,7 @@ namespace cryptonote
     res.mainnet = m_nettype == MAINNET;
     res.testnet = m_nettype == TESTNET;
     res.stagenet = m_nettype == STAGENET;
+    res.nettype = m_nettype == MAINNET ? "mainnet" : m_nettype == TESTNET ? "testnet" : m_nettype == STAGENET ? "stagenet" : "fakechain";
     res.cumulative_difficulty = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(res.height - 1);
     res.block_size_limit = m_core.get_blockchain_storage().get_current_cumulative_blocksize_limit();
     res.block_size_median = m_core.get_blockchain_storage().get_current_cumulative_blocksize_median();
@@ -206,6 +207,7 @@ namespace cryptonote
       boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       res.was_bootstrap_ever_used = m_was_bootstrap_ever_used;
     }
+    res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -362,49 +364,6 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_get_random_outs(const COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::request& req, COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::response& res)
-  {
-    PERF_TIMER(on_get_random_outs);
-    bool r;
-    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS>(invoke_http_mode::BIN, "/getrandom_outs.bin", req, res, r))
-      return r;
-
-    res.status = "Failed";
-
-    if (m_restricted)
-    {
-      if (req.amounts.size() > 100 || req.outs_count > MAX_RESTRICTED_FAKE_OUTS_COUNT)
-      {
-        res.status = "Too many outs requested";
-        return true;
-      }
-    }
-
-    if(!m_core.get_random_outs_for_amounts(req, res))
-    {
-      return true;
-    }
-
-    res.status = CORE_RPC_STATUS_OK;
-    std::stringstream ss;
-    typedef COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::outs_for_amount outs_for_amount;
-    typedef COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::out_entry out_entry;
-    std::for_each(res.outs.begin(), res.outs.end(), [&](outs_for_amount& ofa)
-    {
-      ss << "[" << ofa.amount << "]:";
-      CHECK_AND_ASSERT_MES(ofa.outs.size(), ;, "internal error: ofa.outs.size() is empty for amount " << ofa.amount);
-      std::for_each(ofa.outs.begin(), ofa.outs.end(), [&](out_entry& oe)
-          {
-            ss << oe.global_amount_index << " ";
-          });
-      ss << ENDL;
-    });
-    std::string s = ss.str();
-    LOG_PRINT_L2("COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS: " << ENDL << s);
-    res.status = CORE_RPC_STATUS_OK;
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_outs_bin(const COMMAND_RPC_GET_OUTPUTS_BIN::request& req, COMMAND_RPC_GET_OUTPUTS_BIN::response& res)
   {
     PERF_TIMER(on_get_outs_bin);
@@ -470,34 +429,6 @@ namespace cryptonote
       outkey.txid = epee::string_tools::pod_to_hex(i.txid);
     }
 
-    res.status = CORE_RPC_STATUS_OK;
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_get_random_rct_outs(const COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::request& req, COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::response& res)
-  {
-    PERF_TIMER(on_get_random_rct_outs);
-    bool r;
-    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS>(invoke_http_mode::BIN, "/getrandom_rctouts.bin", req, res, r))
-      return r;
-
-    res.status = "Failed";
-    if(!m_core.get_random_rct_outs(req, res))
-    {
-      return true;
-    }
-
-    res.status = CORE_RPC_STATUS_OK;
-    std::stringstream ss;
-    typedef COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::out_entry out_entry;
-    CHECK_AND_ASSERT_MES(res.outs.size(), true, "internal error: res.outs.size() is empty");
-    std::for_each(res.outs.begin(), res.outs.end(), [&](out_entry& oe)
-      {
-        ss << oe.global_amount_index << " ";
-      });
-    ss << ENDL;
-    std::string s = ss.str();
-    LOG_PRINT_L2("COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS: " << ENDL << s);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -981,14 +912,30 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_transaction_pool_hashes_bin(const COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN::request& req, COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN::response& res, bool request_has_rpc_origin)
+  {
+    PERF_TIMER(on_get_transaction_pool_hashes);
+    bool r;
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN>(invoke_http_mode::JON, "/get_transaction_pool_hashes.bin", req, res, r))
+      return r;
+
+    m_core.get_pool_transaction_hashes(res.tx_hashes, !request_has_rpc_origin || !m_restricted);
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_transaction_pool_hashes(const COMMAND_RPC_GET_TRANSACTION_POOL_HASHES::request& req, COMMAND_RPC_GET_TRANSACTION_POOL_HASHES::response& res, bool request_has_rpc_origin)
   {
     PERF_TIMER(on_get_transaction_pool_hashes);
     bool r;
-    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_HASHES>(invoke_http_mode::JON, "/get_transaction_pool_hashes.bin", req, res, r))
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_HASHES>(invoke_http_mode::JON, "/get_transaction_pool_hashes", req, res, r))
       return r;
 
-    m_core.get_pool_transaction_hashes(res.tx_hashes, !request_has_rpc_origin || !m_restricted);
+    std::vector<crypto::hash> tx_hashes;
+    m_core.get_pool_transaction_hashes(tx_hashes, !request_has_rpc_origin || !m_restricted);
+    res.tx_hashes.reserve(tx_hashes.size());
+    for (const crypto::hash &tx_hash: tx_hashes)
+      res.tx_hashes.push_back(epee::string_tools::pod_to_hex(tx_hash));
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -1626,6 +1573,7 @@ namespace cryptonote
     res.mainnet = m_nettype == MAINNET;
     res.testnet = m_nettype == TESTNET;
     res.stagenet = m_nettype == STAGENET;
+    res.nettype = m_nettype == MAINNET ? "mainnet" : m_nettype == TESTNET ? "testnet" : m_nettype == STAGENET ? "stagenet" : "fakechain";
     res.cumulative_difficulty = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(res.height - 1);
     res.block_size_limit = m_core.get_blockchain_storage().get_current_cumulative_blocksize_limit();
     res.block_size_median = m_core.get_blockchain_storage().get_current_cumulative_blocksize_median();
@@ -1639,6 +1587,7 @@ namespace cryptonote
       boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       res.was_bootstrap_ever_used = m_was_bootstrap_ever_used;
     }
+    res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

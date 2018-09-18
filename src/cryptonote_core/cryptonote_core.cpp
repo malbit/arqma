@@ -439,9 +439,20 @@ namespace cryptonote
     MGINFO("Loading blockchain from folder " << folder.string() << " ...");
 
     const std::string filename = folder.string();
-    // default to fast:async:1
+    // default to fast:async:1 if overridden
     blockchain_db_sync_mode sync_mode = db_defaultsync;
-    uint64_t blocks_per_sync = 1;
+    bool sync_on_blocks = true;
+    uint64_t sync_threshold = 1
+
+    if (m_nettype == FAKECHAIN)
+    {
+      // reset the db by removing the database file before opening it
+      if (!db->remove_data_file(filename))
+      {
+        MERROR("Failed to remove data file in " << filename);
+        return false;
+      }
+    }
 
     try
     {
@@ -481,7 +492,7 @@ namespace cryptonote
         else if(options[0] == "fastest")
         {
           db_flags = DBF_FASTEST;
-          blocks_per_sync = 1000; // default to fastest:async:1000
+          sync_threshold = 1000; // default to fastest:async:1000
           sync_mode = db_sync_mode_is_default ? db_defaultsync : db_async;
         }
         else
@@ -499,9 +510,22 @@ namespace cryptonote
       if(options.size() >= 3 && !safemode)
       {
         char *endptr;
-        uint64_t bps = strtoull(options[2].c_str(), &endptr, 0);
-        if (*endptr == '\0')
-          blocks_per_sync = bps;
+        uint64_t threshold = strtoull(options[2].c_str(), &endptr, 0);
+        if (*endptr == '\0' || !strcmp(endptr, "blocks"))
+        {
+          sync_on_blocks = true;
+          sync_threshold = threshold;
+        }
+        else if (!strcmp(endptr, "bytes"))
+        {
+          sync_on_blocks = false;
+          sync_threshold = threshold;
+        }
+        else
+        {
+          LOG_ERROR("Invalid db sync mode: " << options[2]);
+          return false;
+        }
       }
 
       if (db_salvage)
@@ -518,7 +542,7 @@ namespace cryptonote
     }
 
     m_blockchain_storage.set_user_options(blocks_threads,
-        blocks_per_sync, sync_mode, fast_sync);
+        sync_on_blocks, sync_threshold, sync_mode, fast_sync);
 
     const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
     const cryptonote::test_options regtest_test_options = {
@@ -1075,19 +1099,9 @@ namespace cryptonote
     return m_blockchain_storage.find_blockchain_supplement(req_start_block, qblock_ids, blocks, total_height, start_height, pruned, get_miner_tx_hash, max_count);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_random_outs_for_amounts(const COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::request& req, COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS::response& res) const
-  {
-    return m_blockchain_storage.get_random_outs_for_amounts(req, res);
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::get_outs(const COMMAND_RPC_GET_OUTPUTS_BIN::request& req, COMMAND_RPC_GET_OUTPUTS_BIN::response& res) const
   {
     return m_blockchain_storage.get_outs(req, res);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_random_rct_outs(const COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::request& req, COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS::response& res) const
-  {
-    return m_blockchain_storage.get_random_rct_outs(req, res);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) const

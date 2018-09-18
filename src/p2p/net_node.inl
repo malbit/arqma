@@ -274,7 +274,7 @@ namespace nodetool
       {
         nodetool::peerlist_entry pe = AUTO_VAL_INIT(pe);
         pe.id = crypto::rand<uint64_t>();
-        const uint16_t default_port = testnet ? ::config::testnet::P2P_DEFAULT_PORT : stagenet ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT;
+        const uint16_t default_port = cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT;
         bool r = parse_peer_from_string(pe.adr, pr_str, default_port);
         if (r)
         {
@@ -399,6 +399,9 @@ namespace nodetool
       full_addrs.insert("139.99.106.122:39993");
       full_addrs.insert("77.93.206.172:39993");
     }
+    else if (nettype == cryptonote::FAKECHAIN)
+    {
+    }
     else
     {
       full_addrs.insert("144.217.242.16:19993");
@@ -496,7 +499,7 @@ namespace nodetool
         if (result.size())
         {
           for (const auto& addr_string : result)
-            full_addrs.insert(addr_string + ":" + std::to_string(m_nettype == cryptonote::TESTNET ? ::config::testnet::P2P_DEFAULT_PORT : m_nettype == cryptonote::STAGENET ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT));
+            full_addrs.insert(addr_string + ":" + std::to_string(cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT));
         }
         ++i;
       }
@@ -1840,7 +1843,7 @@ namespace nodetool
     for(const std::string& pr_str: perrs)
     {
       epee::net_utils::network_address na = AUTO_VAL_INIT(na);
-      const uint16_t default_port = m_nettype == cryptonote::TESTNET ? ::config::testnet::P2P_DEFAULT_PORT : m_nettype == cryptonote::STAGENET ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT;
+      const uint16_t default_port = cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT;
       bool r = parse_peer_from_string(na, pr_str, default_port);
       if (r)
       {

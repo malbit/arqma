@@ -166,7 +166,7 @@ struct mdb_txn_safe
 class BlockchainLMDB : public BlockchainDB
 {
 public:
-  BlockchainLMDB(bool batch_transactions=false);
+  BlockchainLMDB(bool batch_transactions=true);
   ~BlockchainLMDB();
 
   virtual void open(const std::string& filename, const int mdb_flags=0);
@@ -180,6 +180,8 @@ public:
   virtual void reset();
 
   virtual std::vector<std::string> get_filenames() const;
+
+  virtual bool remove_data_file(const std::string& folder) const
 
   virtual std::string get_db_name() const;
 
@@ -377,6 +379,8 @@ private:
 
   virtual bool is_read_only() const;
 
+  virtual uint64_t get_database_size() const;
+
   // fix up anything that may be wrong due to past bugs
   virtual void fixup();
 
@@ -445,7 +449,7 @@ private:
 #endif
 #endif
 
-  constexpr static float RESIZE_PERCENT = 0.8f;
+  constexpr static float RESIZE_PERCENT = 0.9f;
 };
 
 }  // namespace cryptonote
