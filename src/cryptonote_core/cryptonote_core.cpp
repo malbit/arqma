@@ -442,7 +442,7 @@ namespace cryptonote
     // default to fast:async:1 if overridden
     blockchain_db_sync_mode sync_mode = db_defaultsync;
     bool sync_on_blocks = true;
-    uint64_t sync_threshold = 1
+    uint64_t sync_threshold = 1;
 
     if (m_nettype == FAKECHAIN)
     {
