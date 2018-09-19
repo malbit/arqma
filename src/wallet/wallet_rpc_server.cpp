@@ -3475,5 +3475,5 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  return daemonizer::daemonize(argc, const_cast<const char**>(argv), t_executor(t_daemon{vm}.run(true)), *vm) ? 0 : 1;
+  return daemonizer::daemonize(argc, const_cast<const char**>(argv), t_executor{}, *vm) ? 0 : 1;
 }
