@@ -40,7 +40,7 @@ using epee::string_tools::pod_to_hex;
 
 // Increase when the DB changes in a non backward compatible way, and there
 // is no automatic conversion, so that a full resync is needed.
-#define VERSION 0
+#define VERSION 1
 
 namespace
 {

@@ -95,10 +95,10 @@ using namespace cryptonote;
 #define SIGNED_TX_PREFIX "ArQmA signed tx set\004"
 #define MULTISIG_UNSIGNED_TX_PREFIX "ArQmA multisig unsigned tx set\001"
 
-#define RECENT_OUTPUT_RATIO (0.25) // 50% of outputs are from the recent zone
+#define RECENT_OUTPUT_RATIO (0.50) // 50% of outputs are from the recent zone
 #define RECENT_OUTPUT_DAYS (1.8) // last 1.8 day makes up the recent zone (taken from monerolink.pdf, Miller et al)
-#define RECENT_OUTPUT_ZONE ((time_t)(RECENT_OUTPUT_DAYS * 5))
-#define RECENT_OUTPUT_BLOCKS (RECENT_OUTPUT_DAYS * 20)
+#define RECENT_OUTPUT_ZONE ((time_t)(RECENT_OUTPUT_DAYS * 15))
+#define RECENT_OUTPUT_BLOCKS (RECENT_OUTPUT_DAYS * 50)
 
 #define FEE_ESTIMATE_GRACE_BLOCKS 10 // estimate fee valid for that many blocks
 
@@ -113,12 +113,12 @@ using namespace cryptonote;
 
 #define OUTPUT_EXPORT_FILE_MAGIC "ArQmA output export\003"
 
-#define SEGREGATION_FORK_HEIGHT 100
+#define SEGREGATION_FORK_HEIGHT 30000
 #define TESTNET_SEGREGATION_FORK_HEIGHT 100
-#define STAGENET_SEGREGATION_FORK_HEIGHT 100
-#define SEGREGATION_FORK_VICINITY 50 /* blocks */
+#define STAGENET_SEGREGATION_FORK_HEIGHT 350
+#define SEGREGATION_FORK_VICINITY 200 /* blocks */
 
-#define FIRST_REFRESH_GRANULARITY     256
+#define FIRST_REFRESH_GRANULARITY     1024
 
 static const std::string MULTISIG_SIGNATURE_MAGIC = "SigMultisigPkV1";
 
@@ -2837,13 +2837,13 @@ bool wallet2::store_keys(const std::string& keys_file_name, const epee::wipeable
 
   rapidjson::Value value2(rapidjson::kNumberType);
 
-  value2.SetInt(m_key_on_device?1:0);
+  value2.SetInt(m_key_on_device ? 1 : 0);
   json.AddMember("key_on_device", value2, json.GetAllocator());
 
-  value2.SetInt(watch_only ? 1 :0); // WTF ? JSON has different true and false types, and not boolean ??
+  value2.SetInt(watch_only ? 1 : 0); // WTF ? JSON has different true and false types, and not boolean ??
   json.AddMember("watch_only", value2, json.GetAllocator());
 
-  value2.SetInt(m_multisig ? 1 :0);
+  value2.SetInt(m_multisig ? 1 : 0);
   json.AddMember("multisig", value2, json.GetAllocator());
 
   value2.SetUint(m_multisig_threshold);
@@ -4760,7 +4760,7 @@ bool wallet2::is_tx_spendtime_unlocked(uint64_t unlock_time, uint64_t block_heig
     uint64_t current_time = static_cast<uint64_t>(time(NULL));
     // XXX: this needs to be fast, so we'd need to get the starting heights
     // from the daemon to be correct once voting kicks in
-    uint64_t v2height = m_nettype == TESTNET ? 5 : m_nettype == STAGENET ? 5 : 5;
+    uint64_t v2height = m_nettype == TESTNET ? 5 : m_nettype == STAGENET ? 500 : 34000;
     uint64_t leeway = CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_SECONDS_V2;
     if(current_time + leeway >= unlock_time)
       return true;
@@ -5727,9 +5727,18 @@ bool wallet2::sign_multisig_tx_from_file(const std::string &filename, std::vecto
 //----------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_fee_multiplier(uint32_t priority, int fee_algorithm) const
 {
-  static const uint64_t old_multipliers[3] = {1, 2, 3};
-  static const uint64_t new_multipliers[3] = {1, 20, 166};
-  static const uint64_t newer_multipliers[4] = {1, 4, 20, 166};
+  static const struct
+  {
+    size_t count;
+    uint64_t multipliers[4];
+  }
+  multipliers[] =
+  {
+    { 3, {1, 2, 3} },
+    { 3, {1, 20, 166} },
+    { 4, {1, 4, 20, 166} },
+    { 4, {1, 5, 25, 1000} },
+  };
 
   if (fee_algorithm == -1)
     fee_algorithm = get_fee_algorithm();
@@ -5745,17 +5754,13 @@ uint64_t wallet2::get_fee_multiplier(uint32_t priority, int fee_algorithm) const
       priority = 1;
   }
 
+  THROW_WALLET_EXCEPTION_IF(fee_algorithm < 0 || fee_algorithm > 3, error::invalid_priority);
+
   // 1 to 3/4 are allowed as priorities
-  uint32_t max_priority = (fee_algorithm >= 2) ? 4 : 3;
+  const uint32_t max_priority = multipliers[fee_algorithm].count;
   if (priority >= 1 && priority <= max_priority)
   {
-    switch (fee_algorithm)
-    {
-      case 0: return old_multipliers[priority-1];
-      case 1: return new_multipliers[priority-1];
-      case 2: return newer_multipliers[priority-1];
-      default: THROW_WALLET_EXCEPTION_IF (true, error::invalid_priority);
-    }
+    return multipliers[fee_algorithm].multipliers[priority-1];
   }
 
   THROW_WALLET_EXCEPTION_IF (false, error::invalid_priority);
@@ -5785,7 +5790,9 @@ uint64_t wallet2::get_per_kb_fee() const
 //----------------------------------------------------------------------------------------------------
 int wallet2::get_fee_algorithm() const
 {
-  // changes at v3 and v5
+  // changes at v3 and v5 and v9
+  if (use_fork_rules(9, 0))
+    return 3;
   if (use_fork_rules(5, 0))
     return 2;
   if (use_fork_rules(3, -720 * 14))
@@ -5793,19 +5800,35 @@ int wallet2::get_fee_algorithm() const
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
+uint64_t wallet2::get_min_ring_size() const
+{
+  if (use_fork_rules(9, 10))
+    return 7;
+  if (use_fork_rules(6, 10))
+    return 4;
+  return 0;
+}
+//------------------------------------------------------------------------------------------------------------------------------
+uint64_t wallet2::get_max_ring_size() const
+{
+  if (use_fork_rules(9, 10))
+    return 15;
+  return 0;
+}
+//------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::adjust_mixin(uint64_t mixin) const
 {
-  if (mixin < 6 && use_fork_rules(7, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 7, using 7");
-    mixin = 6;
+  const uint64_t min_ring_size = get_min_ring_size();
+  if (mixin + 1 < min_ring_size)
+  {
+    MWARNING("Requested ring size " << (mixin + 1) << " too low, using " << min_ring_size);
+    mixin = min_ring_size-1;
   }
-  else if (mixin < 4 && use_fork_rules(6, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 6, using 5");
-    mixin = 4;
-  }
-  else if (mixin < 2 && use_fork_rules(2, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 2, using 3");
-    mixin = 2;
+  const uint64_t max_ring_size = get_max_ring_size();
+  if (max_ring_size && mixin + 1 > max_ring_size)
+  {
+    MWARNING("Requested ring size " << (mixin + 1) << " too high, using " << max_ring_size);
+    mixin = max_ring_size-1;
   }
   return mixin;
 }
@@ -5837,7 +5860,7 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       const uint64_t full_reward_zone = block_size_limit / 2;
 
       // get the last N block headers and sum the block sizes
-      const size_t N = 50;
+      const size_t N = 15;
       if (m_blockchain.size() < N)
       {
         MERROR("The blockchain is too short");
@@ -5865,9 +5888,9 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       }
 
       // estimate how 'full' the last N blocks are
-      const size_t P = 200 * block_size_sum / (N * full_reward_zone);
+      const size_t P = 100 * block_size_sum / (N * full_reward_zone);
       MINFO((boost::format("The last %d blocks fill roughly %d%% of the full reward zone.") % N % P).str());
-      if (P > 160)
+      if (P > 80)
       {
         MINFO("We don't use the low priority because recent blocks are quite full.");
         return priority;

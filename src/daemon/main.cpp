@@ -124,7 +124,7 @@ int main(int argc, char const * argv[])
       return 0;
     }
 
-    // Monero Version
+    // Arqma Version
     if (command_line::get_arg(vm, command_line::arg_version))
     {
       std::cout << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL;

@@ -147,7 +147,7 @@
 #define HF_VERSION_MIN_MIXIN_4                  6
 #define HF_VERSION_MIN_MIXIN_6                  7
 #define HF_VERSION_ENFORCE_RCT                  6
-#define HF_VERSION_MIXIN_7                      6
+#define HF_VERSION_MIXIN_7                      7
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
