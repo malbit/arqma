@@ -5800,35 +5800,19 @@ int wallet2::get_fee_algorithm() const
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
-uint64_t wallet2::get_min_ring_size() const
-{
-  if (use_fork_rules(9, 10))
-    return 7;
-  if (use_fork_rules(6, 10))
-    return 4;
-  return 0;
-}
-//------------------------------------------------------------------------------------------------------------------------------
-uint64_t wallet2::get_max_ring_size() const
-{
-  if (use_fork_rules(9, 10))
-    return 15;
-  return 0;
-}
-//------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::adjust_mixin(uint64_t mixin) const
 {
-  const uint64_t min_ring_size = get_min_ring_size();
-  if (mixin + 1 < min_ring_size)
-  {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low, using " << min_ring_size);
-    mixin = min_ring_size-1;
+  if (mixin < 6 && use_fork_rules(8g, 10)) {
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 7, using 7");
+    mixin = 6;
   }
-  const uint64_t max_ring_size = get_max_ring_size();
-  if (max_ring_size && mixin + 1 > max_ring_size)
-  {
-    MWARNING("Requested ring size " << (mixin + 1) << " too high, using " << max_ring_size);
-    mixin = max_ring_size-1;
+  else if (mixin < 4 && use_fork_rules(6, 10)) {
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 6, using 5");
+    mixin = 4;
+  }
+  else if (mixin < 2 && use_fork_rules(2, 10)) {
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 2, using 3");
+    mixin = 2;
   }
   return mixin;
 }
