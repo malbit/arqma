@@ -121,7 +121,7 @@ namespace cryptonote {
   }
 
   difficulty_type next_difficulty(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds) {
-	  
+
     if(timestamps.size() > DIFFICULTY_WINDOW)
     {
       timestamps.resize(DIFFICULTY_WINDOW);
@@ -163,7 +163,7 @@ namespace cryptonote {
 
     return (low + time_span - 1) / time_span;
     }
-  
+
 // LWMA difficulty algorithm
 // Background:  https://github.com/zawy12/difficulty-algorithms/issues/3
 // Copyright (c) 2017-2018 Zawy (pseudocode)
@@ -234,7 +234,7 @@ namespace cryptonote {
     // Loop through N most recent blocks. N is most recently solved block.
     for (size_t i = 1; i <= N; i++) {
       solveTime = static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i - 1]);
-      solveTime = std::min<int64_t>((T * 10), std::max<int64_t>(solveTime, - FTL));
+      solveTime = std::min<int64_t>((T * 7), std::max<int64_t>(solveTime, -FTL));
       difficulty = cumulative_difficulties[i] - cumulative_difficulties[i - 1];
 	  LWMA += (int64_t)(solveTime * i) / k;
 	  sum_inverse_D += 1 / static_cast<double>(difficulty);
@@ -243,8 +243,8 @@ namespace cryptonote {
     harmonic_mean_D = N / sum_inverse_D;
 
     // Keep LWMA sane in case something unforeseen occurs.
-    if (static_cast<int64_t>(boost::math::round(LWMA)) < T / 20)
-      LWMA = static_cast<double>(T / 20);
+    if (static_cast<int64_t>(boost::math::round(LWMA)) < T / 4)
+      LWMA = static_cast<double>(T / 4);
 
     nextDifficulty = harmonic_mean_D * T / LWMA * adjust;
 

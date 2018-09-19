@@ -125,7 +125,7 @@ namespace tools
         LOG_ERROR("Exception at while refreshing, what=" << ex.what());
       }
       return true;
-    }, 2000);
+    }, 20000);
     m_net_server.add_idle_handler([this](){
       if (m_stop.load(std::memory_order_relaxed))
       {
@@ -3410,7 +3410,7 @@ class t_executor final
 {
 public:
   static std::string const NAME;
-  
+
   std::string const & name()
   {
     return NAME;
@@ -3475,5 +3475,5 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  return daemonizer::daemonize(argc, const_cast<const char**>(argv), t_executor{}, *vm) ? 0 : 1;
+  return daemonizer::daemonize(argc, const_cast<const char**>(argv), t_executor.t_daemon{vm}.run(true), *vm) ? 0 : 1;
 }
