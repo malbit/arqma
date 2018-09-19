@@ -3410,8 +3410,7 @@ class t_executor final
 {
 public:
   static std::string const NAME;
-  typedef daemonize::t_daemon t_daemon;
-
+  
   std::string const & name()
   {
     return NAME;
