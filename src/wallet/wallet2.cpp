@@ -5802,7 +5802,7 @@ int wallet2::get_fee_algorithm() const
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::adjust_mixin(uint64_t mixin) const
 {
-  if (mixin < 6 && use_fork_rules(8g, 10)) {
+  if (mixin < 6 && use_fork_rules(8, 10)) {
     MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 7, using 7");
     mixin = 6;
   }
