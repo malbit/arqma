@@ -64,6 +64,7 @@ library archives (`.a`).
 | Boost        | 1.58          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | basically any | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
 | libzmq       | 3.0.0         | NO       | `libzmq3-dev`      | `zeromq`     | `cppzmq-devel`    | NO       | ZeroMQ library |
+| OpenPGM      | ????          | NO       | `libpgm-dev`       | `libpgm`     | `openpgm-devel`   | NO       | For ZeroMQ     |
 | libunbound   | 1.4.16        | YES      | `libunbound-dev`   | `unbound`    | `unbound-devel`   | NO       | DNS resolver   |
 | libsodium    | ?             | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | libsodium      |
 | libminiupnpc | 2.0           | YES      | `libminiupnpc-dev` | `miniupnpc`  | `miniupnpc-devel` | YES      | NAT punching   |
@@ -88,7 +89,7 @@ Debian / Ubuntu one liner for all dependencies
 
 Clone recursively to pull-in needed submodule(s):
 
-`$ git clone --recursive https://github.com/arqma/arqma`
+`$ git clone https://github.com/arqma/arqma`
 
 If you already have a repo cloned, initialize and update:
 
@@ -235,21 +236,7 @@ application.
 
         pacman -Syuu  
 
-2. Install dependencies
-
-
-    ```
-    pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi
-    ```
-3. Exit Msys2
-
-
-4. Download MinGW-w64 GCC 7.3 posix from: ```https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z```
-
-
-5. Decompress it and replace all catalogue at c:\msys64\mingw64
-
-6. Install dependencies:
+7. Install dependencies:
 
     To build for 64-bit Windows:
 
@@ -259,28 +246,12 @@ application.
 
         pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium
 
-7. Exit Msys2
-
-8. Download MinGW-w64 GCC 7.3 posix from: ```https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z```
-
-9. Unpack `x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z` to some folder. You should have mingw64 output folder. Copy it over to msys64 instalation folder (default c:\msys64) and overwrite files if ask.
-
-10. Run `MSYS2 MINGW64` either `MSYS2 MINGW32` from Menu Start.
-
-11. To verify proper gcc compiler do:
-
-	`gcc --version`
-
-    you should recieve output:
-
-    	gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 7.3.0
-
 
 **Building**
 
 * Download ArQmA with command:
 
-	`git clone --recursive https://github.com/arqma/arqma`
+	`git clone https://github.com/arqma/arqma`
 
 * Activate submodules:
 
