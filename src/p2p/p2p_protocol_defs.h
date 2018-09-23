@@ -37,7 +37,9 @@
 #include "string_tools.h"
 #include "time_helper.h"
 #include "cryptonote_config.h"
+#ifdef ALLOW_DEBUG_COMMANDS
 #include "crypto/crypto.h"
+#ifdef
 
 namespace nodetool
 {
@@ -319,7 +321,6 @@ namespace nodetool
     };
   };
 
-
 #ifdef ALLOW_DEBUG_COMMANDS
   //These commands are considered as insecure, and made in debug purposes for a limited lifetime.
   //Anyone who feel unsafe with this commands can disable the ALLOW_GET_STAT_COMMAND macro.
@@ -336,7 +337,6 @@ namespace nodetool
       KV_SERIALIZE_VAL_POD_AS_BLOB(sign)
     END_KV_SERIALIZE_MAP()
   };
-
 
   template<class payload_stat_info>
   struct COMMAND_REQUEST_STAT_INFO_T
@@ -369,7 +369,6 @@ namespace nodetool
     };
   };
 
-
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
@@ -401,8 +400,6 @@ namespace nodetool
       END_KV_SERIALIZE_MAP()
     };
   };
-  
-#endif
 
   /************************************************************************/
   /*                                                                      */
@@ -427,6 +424,7 @@ namespace nodetool
     };
   };
 
+#endif
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/

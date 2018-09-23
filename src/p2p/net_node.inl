@@ -1400,8 +1400,8 @@ namespace nodetool
     node_data.network_id = m_network_id;
     return true;
   }
-  //-----------------------------------------------------------------------------------
 #ifdef ALLOW_DEBUG_COMMANDS
+  //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::check_trust(const proof_of_trust& tr)
   {
@@ -1474,7 +1474,6 @@ namespace nodetool
     rsp.local_time = time(NULL);
     return 1;
   }
-#endif  
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   int node_server<t_payload_net_handler>::handle_get_peer_id(int command, COMMAND_REQUEST_PEER_ID::request& arg, COMMAND_REQUEST_PEER_ID::response& rsp, p2p_connection_context& context)
@@ -1482,6 +1481,7 @@ namespace nodetool
     rsp.my_id = m_config.m_peer_id;
     return 1;
   }
+#endif
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   int node_server<t_payload_net_handler>::handle_get_support_flags(int command, COMMAND_REQUEST_SUPPORT_FLAGS::request& arg, COMMAND_REQUEST_SUPPORT_FLAGS::response& rsp, p2p_connection_context& context)
