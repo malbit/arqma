@@ -39,7 +39,7 @@
 #include "cryptonote_config.h"
 #ifdef ALLOW_DEBUG_COMMANDS
 #include "crypto/crypto.h"
-#ifdef
+#endif
 
 namespace nodetool
 {
