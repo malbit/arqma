@@ -74,10 +74,6 @@ release-all:
 	mkdir -p build/release
 	cd build/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE)
 
-release-tag:
-    mkdir -p build/release
-    cd build/release && cmake -D BUILD_TESTS=OFF -D BUILD_TAG="Production Release" -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE)
-
 release-static:
 	mkdir -p build/release
 	cd build/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE)
@@ -142,4 +138,4 @@ clean:
 tags:
 	ctags -R --sort=1 --c++-kinds=+p --fields=+iaS --extra=+q --language-force=C++ src contrib tests/gtest
 
-.PHONY: all cmake-debug debug debug-test debug-all cmake-release release release-test release-tag release-all clean tags
+.PHONY: all cmake-debug debug debug-test debug-all cmake-release release release-test release-all clean tags
