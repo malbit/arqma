@@ -1167,7 +1167,7 @@ namespace nodetool
             for (const auto &peer: get_seed_nodes(m_nettype))
             {
               MDEBUG("Fallback seed node: " << peer);
-              append_net_address(m_seed_nodes, peer, m_nettype == cryptonote::TESTNET ? ::config::testnet::P2P_DEFAULT_PORT : m_nettype == cryptonote::STAGENET ? ::config::stagenet::P2P_DEFAULT_PORT : ::config::P2P_DEFAULT_PORT);
+              append_net_address(m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
             }
             m_fallback_seed_nodes_added = true;
             if (current_index == m_seed_nodes.size())
@@ -1866,7 +1866,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::set_max_out_peers(const boost::program_options::variables_map& vm, int64_t max)
   {
     if(max == -1) {
-      m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT;
+      m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_OUT_CONNECTIONS_COUNT;
       return true;
     }
     m_config.m_net_config.max_out_connection_count = max;
@@ -1877,7 +1877,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::set_max_in_peers(const boost::program_options::variables_map& vm, int64_t max)
   {
     if(max == -1) {
-      m_config.m_net_config.max_in_connection_count = -1;
+      m_config.m_net_config.max_in_connection_count = P2P_DEFAULT_IN_CONNECTIONS_COUNT;
       return true;
     }
     m_config.m_net_config.max_in_connection_count = max;
