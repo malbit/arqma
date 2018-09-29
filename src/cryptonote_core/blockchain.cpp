@@ -801,7 +801,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   size_t difficulty_blocks_count =
       version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V10 :
       version == 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
-      version =< 8 ? DIFFICULTY_BLOCKS_COUNT_V2 :
+      version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
                      DIFFICULTY_BLOCKS_COUNT;
 
   if (m_timestamps_and_difficulties_height != 0 && ((height - m_timestamps_and_difficulties_height) == 1) && m_timestamps.size() >= difficulty_blocks_count)
@@ -844,7 +844,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   }
   if (version >= 10) {
     return next_difficulty_lwma_2(timestamps, difficulties);
-  } else if (version =< 9 && version >= 7) {
+  } else if (version >= 7) {
     return next_difficulty_lwma(timestamps, difficulties, version);
   } else {
     return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
@@ -1006,7 +1006,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   size_t difficulty_blocks_count =
       version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V10 :
       version == 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
-      version =< 8 ? DIFFICULTY_BLOCKS_COUNT_V2 :
+      version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
                      DIFFICULTY_BLOCKS_COUNT;
 
   // if the alt chain isn't long enough to calculate the difficulty target
@@ -1062,7 +1062,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   // FIXME: This will fail if fork activation heights are subject to voting
   if (version >= 10) {
     return next_difficulty_lwma_2(timestamps, difficulties);
-  } else if (version =< 9 && version >= 7) {
+  } else if (version >= 7) {
     return next_difficulty_lwma(timestamps, difficulties, version);
   } else {
     return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
@@ -3028,7 +3028,7 @@ bool Blockchain::check_block_timestamp(std::vector<uint64_t>& timestamps, const 
   uint64_t top_block_timestamp = timestamps.back();
   if (hf_version  > 9 && b.timestamp < top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4)
   {
-    MERROR_VER("Timestamp of Block with id: " << get_block_hash(b) << ", " << b.timestamp << ", is less than Top Block Timestamp - FTL" << top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V6);
+    MERROR_VER("Timestamp of Block with id: " << get_block_hash(b) << ", " << b.timestamp << ", is less than Top Block Timestamp - FTL" << top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10);
     return false;
   }
 
