@@ -1061,11 +1061,11 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
 
   // FIXME: This will fail if fork activation heights are subject to voting
   if (version >= 10) {
-    return next_difficulty_lwma_2(timestamps, difficulties);
+    return next_difficulty_lwma_2(timestamps, cumulative_difficulties);
   } else if (version >= 7) {
-    return next_difficulty_lwma(timestamps, difficulties, version);
+    return next_difficulty_lwma(timestamps, cumulative_difficulties, version);
   } else {
-    return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
+    return next_difficulty(timestamps, cumulative_difficulties, DIFFICULTY_TARGET_V2);
   }
 
 }
@@ -3060,12 +3060,12 @@ bool Blockchain::check_block_timestamp(const block& b) const
   LOG_PRINT_L3("Blockchain::" << __func__);
   uint64_t cryptonote_block_future_time_limit;
   uint8_t hf_version = get_current_hard_fork_version();
-  if (hf_version < 2) {
-    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT;
-  } else if (hf_version =< 9) {
+  if (hf_version >= 10) {
+    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10;
+  } else if (hf_version >= 7) {
     cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3;
   } else {
-    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10;
+    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT;
   }
 
   if(b.timestamp > get_adjusted_time() + cryptonote_block_future_time_limit)
