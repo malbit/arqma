@@ -253,4 +253,65 @@ namespace cryptonote {
     next_difficulty = static_cast<uint64_t>(nextDifficulty);
     return next_difficulty;
    }
+
+// LWMA-2 difficulty algorithm (commented version)
+// Copyright (c) 2017-2018 Zawy, MIT License
+// https://github.com/zawy12/difficulty-algorithms/issues/3
+// Bitcoin clones must lower their FTL.
+// Cryptonote et al coins must make the following changes:
+// #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW    11
+// #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT        3 * DIFFICULTY_TARGET
+// #define DIFFICULTY_WINDOW                      60 //  45, 60, & 90 for T=600, 120, & 60.
+// Bytecoin / Karbo clones may not have the following
+// #define DIFFICULTY_BLOCKS_COUNT       DIFFICULTY_WINDOW+1
+// The BLOCKS_COUNT is to make timestamps & cumulative_difficulty vectors size N+1
+// Do not sort timestamps.  
+// CN coins (but not Monero >= 12.3) must deploy the Jagerman MTP Patch. See:
+// https://github.com/loki-project/loki/pull/26   or
+// https://github.com/graft-project/GraftNetwork/pull/118/files
+
+  // difficulty_type should be uint64_t
+ difficulty_type next_difficulty_lwma_2(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties) {
+
+   int64_t T    = DIFFICULTY_TARGET_V10; // target solvetime seconds
+   int64_t N   = DIFFICULTY_WINDOW_V10; //  N=45, 60, and 90 for T=600, 120, 60.
+   int64_t L(0), ST, sum_3_ST(0), next_D, prev_D;
+
+       // Make sure timestamps & CD vectors are not bigger than they are supposed to be.
+       assert(timestamps.size() == cumulative_difficulties.size() && timestamps.size() <= static_cast<uint64_t>(N+1) );
+
+       // If it's a new coin, do startup code.
+       // Increase difficulty_guess if it needs to be much higher, but guess lower than lowest guess.
+       uint64_t difficulty_guess = 100;
+       if (timestamps.size() <= 10 ) {   return difficulty_guess;   }
+       // Use "if" instead of "else if" in case vectors are incorrectly N all the time instead of N+1.
+       if ( timestamps.size() < static_cast<uint64_t>(N +1) ) { N = timestamps.size()-1;  }
+
+       // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
+       // difficulty_guess = 100; //  Dev may change.  Guess low.
+       // if (height <= UPGRADE_HEIGHT + static_cast<uint64_t>(N+1) ) { return difficulty_guess;  }
+
+   // N is most recently solved block. i must be signed
+   for ( int64_t i = 1; i <= N; i++) {
+       ST = static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i-1]);
+       ST = std::max(-5*T, std::min(ST, 6*T));
+       L +=  ST * i ; // Give more weight to most recent blocks.
+       // Do following inside loop to capture -FTL and +6*T limitations.
+       if ( i > N-3 ) { sum_3_ST += ST; }
+   }
+   // Calculate next_D = avgD * T / LWMA(STs) using integer math
+   // Do a cast in case L goes negative. Do not limit L. That's done by limiting next_D below.
+       next_D = (static_cast<int64_t>(cumulative_difficulties[N] - cumulative_difficulties[0])*T*(N+1)*99)/(100*2*L);
+
+   // implement LWMA-2 changes from LWMA.
+   prev_D = cumulative_difficulties[N] - cumulative_difficulties[N-1];
+   // The following limits are the generous max that should reasonably occur.
+   next_D = std::max( (prev_D*67)/100, std::min(next_D, (prev_D*150)/100 ));
+   // N = 90 coins change 108 to 106.
+   if ( sum_3_ST < (8*T)/10) {  next_D = std::max(next_D,(prev_D*108)/100); }
+
+   return static_cast<uint64_t>(next_D);
+
+   // next_Target = sumTargets*L*2/0.998/T/(N+1)/N/N; // To show the difference.
+  }
 }

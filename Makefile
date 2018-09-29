@@ -39,9 +39,9 @@ debug: cmake-debug
 
 # Temporarily disable some tests:
 #  * libwallet_api_tests fail (Issue #895)
-debug-test:
-	mkdir -p build/debug
-	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug ../.. &&  $(MAKE) && $(MAKE) ARGS="-E libwallet_api_tests" test
+#debug-test:
+#	mkdir -p build/debug
+#	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug ../.. &&  $(MAKE) && $(MAKE) ARGS="-E libwallet_api_tests" test
 
 debug-all:
 	mkdir -p build/debug
@@ -66,9 +66,9 @@ cmake-release:
 release: cmake-release
 	cd build/release && $(MAKE)
 
-release-test:
-	mkdir -p build/release
-	cd build/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE) && $(MAKE) test
+#release-test:
+#	mkdir -p build/release
+#	cd build/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE) && $(MAKE) test
 
 release-all:
 	mkdir -p build/release
@@ -125,9 +125,9 @@ release-static-win32:
 	mkdir -p build/release
 	cd build/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="i686" -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x32" -D CMAKE_TOOLCHAIN_FILE=../../cmake/32-bit-toolchain.cmake -D MSYS2_FOLDER=c:/msys32 ../.. && $(MAKE)
 
-fuzz:
-	mkdir -p build/fuzz
-	cd build/fuzz && cmake -D STATIC=ON -D SANITIZE=ON -D BUILD_TESTS=ON -D USE_LTO=OFF -D CMAKE_C_COMPILER=afl-gcc -D CMAKE_CXX_COMPILER=afl-g++ -D ARCH="x86-64" -D CMAKE_BUILD_TYPE=fuzz -D BUILD_TAG="linux-x64" ../.. && $(MAKE)
+#fuzz:
+#	mkdir -p build/fuzz
+#	cd build/fuzz && cmake -D STATIC=ON -D SANITIZE=ON -D BUILD_TESTS=ON -D USE_LTO=OFF -D CMAKE_C_COMPILER=afl-gcc -D CMAKE_CXX_COMPILER=afl-g++ -D ARCH="x86-64" -D CMAKE_BUILD_TYPE=fuzz -D BUILD_TAG="linux-x64" ../.. && $(MAKE)
 
 clean:
 	@echo "WARNING: Back-up your wallet if it exists within ./build!" ; \

@@ -48,9 +48,11 @@ static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
   "1.1.1.1",    				// Cloudflare
   "8.8.8.8",         			// Google
   "64.6.64.6",      		 // Verisign
-  "209.244.0.3",      		 // Level3
-  "8.26.56.26",   			// Comodo
-  "77.88.8.8",				// Yandex
+  "81.3.27.54",      		 // Lightning Wire Labs
+  "159.89.249.249",   			// OpenNIC
+  "9.9.9.9",				// Quad9
+  "109.69.8.51",        //puntCAT
+  "91.239.100.100",     //censurfridns.dk
 };
 
 static boost::mutex instance_lock;
@@ -466,7 +468,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   for (size_t n = 0; n < dns_urls.size(); ++n)
   {
     threads[n] = boost::thread([n, dns_urls, &records, &avail, &valid](){
-      records[n] = tools::DNSResolver::instance().get_txt_record(dns_urls[n], avail[n], valid[n]); 
+      records[n] = tools::DNSResolver::instance().get_txt_record(dns_urls[n], avail[n], valid[n]);
     });
   }
   for (size_t n = 0; n < dns_urls.size(); ++n)

@@ -1285,8 +1285,26 @@ namespace cryptonote
      *
      * @return true if the block's timestamp is valid, otherwise false
      */
-    bool check_block_timestamp(std::vector<uint64_t>& timestamps, const block& b) const;
+    bool check_block_timestamp(std::vector<uint64_t>& timestamps, const block& b, uint64_t& median_ts) const;
     //bool check_block_timestamp(std::vector<uint64_t>& timestamps, const block& b) const { uint64_t median_ts; return check_block_timestamp(timestamps, b, median_ts); }
+
+    /**
+     * @brief checks and returns median block timestamp as defined by protocol
+     */
+    bool check_median_block_timestamp(const block& b, uint64_t& median_ts) const;
+
+    /**
+     * @brief checks a block's timestamp
+     *
+     * If the block is not more recent than the median of the recent
+     * timestamps passed here, it is considered invalid.
+     *
+     * @param timestamps a list of the most recent timestamps to check against
+     * @param b the block to be checked
+     *
+     * @return true if the block's timestamp is valid, otherwise false
+     */
+    bool check_block_timestamp(std::vector<uint64_t>& timestamps, const block& b) const;
 
     /**
      * @brief get the "adjusted time"
