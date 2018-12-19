@@ -156,7 +156,7 @@ namespace epee
     CRITICAL_REGION_LOCAL(mutex());
     return map().size();
 #else
-    return 0
+    return 0;
 #endif
   }
 
@@ -166,7 +166,7 @@ namespace epee
     CRITICAL_REGION_LOCAL(mutex());
     return num_locked_objects;
 #else
-    return 0
+    return 0;
 #endif
   }
 
