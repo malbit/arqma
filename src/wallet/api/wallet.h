@@ -35,7 +35,6 @@
 #include "wallet/wallet2.h"
 
 #include <string>
-#include <thread>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
