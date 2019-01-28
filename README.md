@@ -437,6 +437,11 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
+Use posix
+
+* ```RUN echo "1"| sudo update-alternatives --config x86_64-w64-mingw32-gcc```
+* ```RUN echo "1"| sudo update-alternatives --config x86_64-w64-mingw32-g++```
+
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
@@ -450,7 +455,7 @@ from which cmake was invoked (repository root by default). To run in
 foreground:
 
     ./bin/arqmad
-
+    
 To list all available options, run `./bin/arqmad --help`.  Options can be
 specified either on the command line or in a configuration file passed by the
 `--config-file` argument.  To specify an option in the configuration file, add
