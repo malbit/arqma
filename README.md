@@ -437,10 +437,15 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
-Use posix
+Use posix for 64bit
 
 * ```RUN echo "1"| sudo update-alternatives --config x86_64-w64-mingw32-gcc```
 * ```RUN echo "1"| sudo update-alternatives --config x86_64-w64-mingw32-g++```
+
+Use posix for 32bit
+
+* ```RUN echo "1"| sudo update-alternatives --config i686-w64-mingw32-gcc```
+* ```RUN echo "1"| sudo update-alternatives --config i686-w64-mingw32-g++```
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
