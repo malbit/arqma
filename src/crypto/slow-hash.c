@@ -1255,7 +1255,7 @@ static void (*const extra_hashes[4])(const void *, size_t, char *) = {
   hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
 };
 
-static size_t e2i(const uint8_t* a, size_t count) { return (*((uint64_t*)a) / AES_BLOCK_SIZE) & (count - 1); }
+static size_t e2i(const uint8_t* a, size_t count) { return (SWAP64LE(*((uint64_t*)a)) / AES_BLOCK_SIZE) & (count - 1); }
 
 static void mul(const uint8_t* a, const uint8_t* b, uint8_t* res) {
   uint64_t a0, b0;
