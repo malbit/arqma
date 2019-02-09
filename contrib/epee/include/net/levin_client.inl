@@ -74,7 +74,7 @@ levin_client_impl::~levin_client_impl()
 }
 //------------------------------------------------------------------------------
 inline
-int levin_client_impl::invoke(int command, const std::string& in_buff, std::string& buff_out)
+int levin_client_impl::invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out)
 {
 	if(!is_connected())
 		return -1;
@@ -133,13 +133,13 @@ int levin_client_impl::notify(int command, const std::string& in_buff)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 inline
-  int levin_client_impl2::invoke(int command, const std::string& in_buff, std::string& buff_out)
+  int levin_client_impl2::invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out)
 {
   if(!is_connected())
     return -1;
 
   bucket_head2 head = {0};
-  head.m_signature = SWAP64LE(LEVIN_SIGNATURE);
+	head.m_signature = SWAP64LE(LEVIN_SIGNATURE);
   head.m_cb = SWAP64LE(in_buff.size());
   head.m_have_to_return_data = true;
 	head.m_command = SWAP32LE(command);
@@ -158,8 +158,7 @@ inline
 
   head = *(bucket_head2*)local_buff.data();
 
-
-  if(head.m_signature!=SWAP64LE(LEVIN_SIGNATURE))
+  if(head.m_signature != SWAP64LE(LEVIN_SIGNATURE))
   {
     LOG_PRINT_L1("Signature mismatch in response");
     return -1;

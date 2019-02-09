@@ -114,10 +114,10 @@ namespace levin
 				}
 				{
 #if BYTE_ORDER == LITTLE_ENDIAN
-					bucket_head &phead = *(bucket_head*)m_cach_in_buffer.data();
+          bucket_head &phead = *(bucket_head*)m_cach_in_buffer.data();
 #else
-					bucket_head phead = *(bucket_head*)m_cach_in_buffer.data();
-					phead.m_signature = SWAP64LE(phead.m_signature);
+          bucket_head phead = *(bucket_head*)m_cach_in_buffer.data();
+          phead.m_signature = SWAP64LE(phead.m_signature);
 					phead.m_cb = SWAP64LE(phead.m_cb);
 					phead.m_command = SWAP32LE(phead.m_command);
 					phead.m_return_code = SWAP32LE(phead.m_return_code);

@@ -88,9 +88,9 @@ namespace levin
 		}
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-		levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
+    levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
 #else
-		levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
+    levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
 		head.m_signature = SWAP64LE(head.m_signature);
 		head.m_cb = SWAP64LE(head.m_cb);
 		head.m_command = SWAP32LE(head.m_command);
@@ -125,9 +125,9 @@ namespace levin
 		}
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-		levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
+    levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
 #else
-		levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
+    levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
 		head.m_signature = SWAP64LE(head.m_signature);
 		head.m_cb = SWAP64LE(head.m_cb);
 		head.m_command = SWAP32LE(head.m_command);
