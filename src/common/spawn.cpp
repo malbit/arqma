@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
@@ -35,6 +36,7 @@
 #include <windows.h>
 #else
 #include <sys/wait.h>
+#include <signal.h>
 #endif
 
 #include "misc_log_ex.h"
@@ -114,7 +116,10 @@ int spawn(const char *filename, const std::vector<std::string>& args, bool wait)
   if (pid > 0)
   {
     if (!wait)
+    {
+      signal(SIGCHLD, SIG_IGN);
       return 0;
+    }
 
     while (1)
     {

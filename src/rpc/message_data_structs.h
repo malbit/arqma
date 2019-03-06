@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -78,6 +79,7 @@ namespace rpc
     uint32_t ip;
     uint16_t port;
     uint64_t last_seen;
+    uint32_t pruning_seed;
   };
 
   struct tx_in_pool

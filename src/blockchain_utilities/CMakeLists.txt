@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -50,7 +51,7 @@ set(blockchain_import_private_headers
   bootstrap_serialization.h
   )
 
-monero_private_headers(blockchain_import
+arqma_private_headers(blockchain_import
 	  ${blockchain_import_private_headers})
 
 set(blockchain_export_sources
@@ -65,7 +66,7 @@ set(blockchain_export_private_headers
   bootstrap_serialization.h
   )
 
-monero_private_headers(blockchain_export
+arqma_private_headers(blockchain_export
 	  ${blockchain_export_private_headers})
 
 
@@ -79,7 +80,7 @@ set(blockchain_blackball_private_headers
   bootstrap_serialization.h
   )
 
-monero_private_headers(blockchain_blackball
+arqma_private_headers(blockchain_blackball
 	  ${blockchain_blackball_private_headers})
 
 set(blockchain_usage_sources
@@ -88,8 +89,29 @@ set(blockchain_usage_sources
 
 set(blockchain_usage_private_headers)
 
-monero_private_headers(blockchain_usage
+arqma_private_headers(blockchain_usage
 	  ${blockchain_usage_private_headers})
+
+
+set(blockchain_prune_known_spent_data_sources
+  blockchain_prune_known_spent_data.cpp
+  )
+
+set(blockchain_prune_known_spent_data_private_headers)
+
+arqma_private_headers(blockchain_prune_known_spent_data
+         ${blockchain_prune_known_spent_data_private_headers})
+
+
+set(blockchain_prune_sources
+  blockchain_prune.cpp
+  )
+
+set(blockchain_prune_private_headers)
+
+arqma_private_headers(blockchain_prune
+         ${blockchain_prune_private_headers})
+
 
 
 
@@ -99,7 +121,7 @@ set(blockchain_ancestry_sources
 
 set(blockchain_ancestry_private_headers)
 
-monero_private_headers(blockchain_ancestry
+arqma_private_headers(blockchain_ancestry
 	  ${blockchain_ancestry_private_headers})
 
 
@@ -110,12 +132,12 @@ set(blockchain_depth_sources
 
 set(blockchain_depth_private_headers)
 
-monero_private_headers(blockchain_depth
+arqma_private_headers(blockchain_depth
 	  ${blockchain_depth_private_headers})
 
 
 
-monero_add_executable(blockchain_import
+arqma_add_executable(blockchain_import
   ${blockchain_import_sources}
   ${blockchain_import_private_headers}
   ${blocksdat})
@@ -142,7 +164,7 @@ set_property(TARGET blockchain_import
 	OUTPUT_NAME "arqma-blockchain-import")
 install(TARGETS blockchain_import DESTINATION bin)
 
-monero_add_executable(blockchain_export
+arqma_add_executable(blockchain_export
   ${blockchain_export_sources}
   ${blockchain_export_private_headers})
 
@@ -163,7 +185,7 @@ set_property(TARGET blockchain_export
 	OUTPUT_NAME "arqma-blockchain-export")
 install(TARGETS blockchain_export DESTINATION bin)
 
-monero_add_executable(blockchain_blackball
+arqma_add_executable(blockchain_blackball
   ${blockchain_blackball_sources}
   ${blockchain_blackball_private_headers})
 
@@ -186,7 +208,7 @@ set_property(TARGET blockchain_blackball
 install(TARGETS blockchain_blackball DESTINATION bin)
 
 
-monero_add_executable(blockchain_usage
+arqma_add_executable(blockchain_usage
   ${blockchain_usage_sources}
   ${blockchain_usage_private_headers})
 
@@ -207,7 +229,7 @@ set_property(TARGET blockchain_usage
 	OUTPUT_NAME "arqma-blockchain-usage")
 install(TARGETS blockchain_usage DESTINATION bin)
 
-monero_add_executable(blockchain_ancestry
+arqma_add_executable(blockchain_ancestry
   ${blockchain_ancestry_sources}
   ${blockchain_ancestry_private_headers})
 
@@ -228,7 +250,7 @@ set_property(TARGET blockchain_ancestry
 	OUTPUT_NAME "arqma-blockchain-ancestry")
 install(TARGETS blockchain_ancestry DESTINATION bin)
 
-monero_add_executable(blockchain_depth
+arqma_add_executable(blockchain_depth
   ${blockchain_depth_sources}
   ${blockchain_depth_private_headers})
 
@@ -248,3 +270,47 @@ set_property(TARGET blockchain_depth
 	PROPERTY
 	OUTPUT_NAME "arqma-blockchain-depth")
 install(TARGETS blockchain_depth DESTINATION bin)
+
+arqma_add_executable(blockchain_prune_known_spent_data
+  ${blockchain_prune_known_spent_data_sources}
+  ${blockchain_prune_known_spent_data_private_headers})
+
+target_link_libraries(blockchain_prune_known_spent_data
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    p2p
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_prune_known_spent_data
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-prune-known-spent-data")
+install(TARGETS blockchain_prune_known_spent_data DESTINATION bin)
+
+arqma_add_executable(blockchain_prune
+  ${blockchain_prune_sources}
+  ${blockchain_prune_private_headers})
+
+set_property(TARGET blockchain_prune
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-prune")
+install(TARGETS blockchain_prune DESTINATION bin)
+
+target_link_libraries(blockchain_prune
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    p2p
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})

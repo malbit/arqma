@@ -1,7 +1,7 @@
-# Arqma Network
+## Arqma Network
 
-Copyright (c) 2018 The Arqma Network.
-Copyright (c) 2014-2018 The Monero Project.   
+Copyright (c) 2018-2019 The Arqma Network.     
+Copyright (c) 2014-2018 The Monero Project.  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -10,6 +10,33 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
+- Telegram: [https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw](https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw)
+
+## Other Arqma related websites
+
+- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
+- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
+- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
+- Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
+- Arqma Mining Pools List: [https://pools.arqma.com](https://pools.arqma.com)
+- Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
+- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
+- Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
+- Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
+- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
+- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
+
+## Arqma Social-Media Websites
+
+- Twitter: [https://twitter.com/ArQmA_Network](https://twitter.com/ArQmA_Network)
+- FaceBook: [https://www.facebook.com/ARQMAnetwork](https://www.facebook.com/ARQMAnetwork)
+- Medium: [https://medium.com/@ArQmANetwork](https://medium.com/@ArQmANetwork)
+- YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
+
+## Arqma Exchange Websites
+
+- TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
+- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
 
 ## Introduction
 
@@ -28,19 +55,6 @@ This is the core implementation of Arqma. It is open source and completely free 
 As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.
 
 **Anyone is welcome to contribute to Arqma's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
-
-## Supporting the project
-
-Arqma is a 100% community-sponsored endeavor. If you want to join our efforts, the easiest thing you can do is support the project financially. You can send ARQ to the Arqma donation address via the `donate` command (type `help` in the command-line wallet for details).
-
-Arqma donation addresses are:
-
-ARQ:  `ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3`
-       (viewkey: `4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62`)
-
-BTC:  `32DEr9inVahpfYL8NSLFHVftJqY3Rb1tUb`
-
-We are also did add Arqma Donation address to OpenAlias at Arq-Net: donations@arqma.com
 
 ## License
 

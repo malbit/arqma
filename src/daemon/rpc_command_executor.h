@@ -6,6 +6,7 @@
 
 */
 
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -152,6 +153,10 @@ public:
   bool relay_tx(const std::string &txid);
 
   bool sync_info();
+
+  bool prune_blockchain();
+
+  bool check_blockchain_pruning();
 };
 
 } // namespace daemonize
