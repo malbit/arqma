@@ -121,7 +121,7 @@ namespace nodetool
 
   struct connection_entry_2
   {
-    net_address adr;
+    AddressType adr;
 	peerid_type id;
 	uint64_t time_started;
 	uint64_t last_recv;
