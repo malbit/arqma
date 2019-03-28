@@ -62,6 +62,7 @@ namespace cryptonote
     crypto::hash m_last_known_hash;
     uint32_t m_pruning_seed;
     bool m_anchor;
+    std::string m_remote_version;
     //size_t m_score;  TODO: add score calculations
   };
 

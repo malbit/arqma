@@ -210,6 +210,7 @@ namespace cryptonote
     crypto::hash  top_id;
     uint8_t top_version;
     uint32_t pruning_seed;
+    std::string client_version;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(current_height)
@@ -217,6 +218,7 @@ namespace cryptonote
       KV_SERIALIZE_VAL_POD_AS_BLOB(top_id)
       KV_SERIALIZE_OPT(top_version, (uint8_t)0)
       KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
+      KV_SERIALIZE(client_version)
     END_KV_SERIALIZE_MAP()
   };
 

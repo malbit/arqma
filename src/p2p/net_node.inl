@@ -1725,11 +1725,17 @@ namespace nodetool
     }
     m_network_zones.at(epee::net_utils::zone::public_).m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
-      connection_entry ce;
+      connection_entry_2 ce;
       ce.adr  = cntxt.m_remote_address;
       ce.id = cntxt.peer_id;
       ce.is_income = cntxt.m_is_income;
-      rsp.connections_list.push_back(ce);
+      ce.time_started = cntxt.m_started;
+      ce.last_recv = cntxt.m_last_recv;
+      ce.last_send = cntxt.m_last_send;
+      size_t len = std::min(sizeof(ce.version) - 1, cntxt.m_remote_version.size());
+	  std::strncpy(ce.version, cntxt.m_remote_version.c_str(), len);
+	  ce.version[len] = 0;
+      rsp.connections_list_2.push_back(ce);
       return true;
     });
 
