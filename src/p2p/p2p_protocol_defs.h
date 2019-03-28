@@ -119,7 +119,8 @@ namespace nodetool
   
 #define P2P_CONNECTION_ENTRY_VERSION_MAX_SIZE 50
 
-  struct connection_entry_2
+  template<typename AddressType>
+  struct connection_entry_base_2
   {
     AddressType adr;
 	peerid_type id;
@@ -128,7 +129,18 @@ namespace nodetool
 	uint64_t last_send;
 	char version[P2P_CONNECTION_ENTRY_VERSION_MAX_SIZE];
 	bool is_income;
+	
+	BEGIN_KV_SERIALIZE_MAP()
+	  KV_SERIALIZE(adr)
+	  KV_SERIALIZE(ip)
+	  KV_SERIALIZE(time_started)
+	  KV_SERIALIZE(last_recv)
+	  KV_SERIALIZE(last_send)
+	  KV_SERIALIZE(version[P2P_CONNECTION_ENTRY_VERSION_MAX_SIZE])
+	  KV_SERIALIZE(is_income)
+	END_KV_SERIALIZE_MAP()
   };
+  typedef connection_entry_base_2<epee::net_utils::network_address> connection_entry_2;
 
 #pragma pack(pop)
 
