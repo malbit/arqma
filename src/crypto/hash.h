@@ -1,21 +1,24 @@
 // Copyright (c) 2014-2018, The Monero Project
-// 
+// Copyright (c) 2018-2019, The Arqma Network
+//
+// Code is based at Turtlecoin
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -25,7 +28,7 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
@@ -38,6 +41,21 @@
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
+
+// Standard Cryptonight Definitions
+#define CN_PAGE_SIZE                    2097152
+#define CN_SCRATCHPAD                   2097152
+#define CN_ITERATIONS                   1048576
+
+// Standard CryptoNight Lite Definitions
+#define CN_LITE_PAGE_SIZE               2097152
+#define CN_LITE_SCRATCHPAD              1048576
+#define CN_LITE_ITERATIONS              262144
+
+// Standard CryptoNight Arqma
+#define CN_ARQMA_PAGE_SIZE             262144
+#define CN_ARQMA_SCRATCHPAD            262144
+#define CN_ARQMA_ITERATIONS            131072
 
 namespace crypto {
 
@@ -54,29 +72,70 @@ namespace crypto {
   };
 #pragma pack(pop)
 
-  static_assert(sizeof(hash) == HASH_SIZE, "Invalid structure size");
-  static_assert(sizeof(hash8) == 8, "Invalid structure size");
-
   /*
     Cryptonight hash functions
   */
 
-  inline void cn_fast_hash(const void *data, std::size_t length, hash &hash) {
+  inline void cn_fast_hash(const void *data, size_t length, hash &hash) {
     cn_fast_hash(data, length, reinterpret_cast<char *>(&hash));
   }
 
-  inline hash cn_fast_hash(const void *data, std::size_t length) {
+  inline hash cn_fast_hash(const void *data, size_t length) {
     hash h;
     cn_fast_hash(data, length, reinterpret_cast<char *>(&h));
     return h;
   }
 
-  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
+  // Standard CryptoNight
+  inline void cn_slow_hash_v0(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 0, 0, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
   }
 
-  inline void cn_slow_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+  inline void cn_slow_hash_v1(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 1, 0, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
+  }
+
+  inline void cn_slow_hash_v2(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 2, 0, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
+  }
+
+  // Standard CryptoNight Lite
+  inline void cn_lite_slow_hash_v0(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 0, 0, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+  }
+
+  inline void cn_lite_slow_hash_v1(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 1, 0, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+  }
+
+  inline void cn_lite_slow_hash_v2(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+  }
+
+  // Standard CryptoNight Arqma
+  inline void cn_arqma_slow_hash_v0(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+  }
+
+  inline void cn_arqma_slow_hash_v1(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 1, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+  }
+
+  inline void cn_arqma_slow_hash_v2(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 2, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+  }
+
+  // Standard CryptoNight Arqma Lite
+  inline void cn_arqma_lite_slow_hash_v0(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+  }
+
+  inline void cn_arqma_lite_slow_hash_v1(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 1, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+  }
+
+  inline void cn_arqma_lite_slow_hash_v2(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
   inline void tree_hash(const hash *hashes, std::size_t count, hash &root_hash) {

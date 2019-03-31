@@ -101,6 +101,7 @@ static const struct {
  { 9, 7000, 0, 1530320400 },
  { 10, 61250, 0, 1543615200 },
  { 11, 131650, 0, 1552424400 },
+ { 12, 666666, 0, 1577836800 }
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
@@ -117,6 +118,7 @@ static const struct {
  { 9, 20, 0, 1530248400 },
  { 10, 100, 0, 1538352000 },
  { 11, 800, 0, 1552424400 },
+ { 12, 1000, 0, 1554076860 }
 };
 static const uint64_t testnet_hard_fork_version_1_till = 1;
 
@@ -133,6 +135,7 @@ static const struct {
  { 9, 200, 0, 1530248400 },
  { 10, 500, 0, 1538352000 },
  { 11, 800, 0, 1552424400 },
+ { 12, 1500, 0, 1554076860 }
 };
 static const uint64_t stagenet_hard_fork_version_1_till = 1;
 
@@ -596,7 +599,7 @@ block Blockchain::pop_block_from_blockchain()
 
   block popped_block;
   std::vector<transaction> popped_txs;
-  
+
   CHECK_AND_ASSERT_THROW_MES(m_db->height() > 1, "Cannot pop the genesis block.");
 
   try
