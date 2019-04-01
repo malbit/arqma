@@ -76,18 +76,18 @@ namespace crypto {
   inline void generate_chacha_key(const void *data, size_t size, chacha_key& key, uint64_t kdf_rounds) {
     static_assert(sizeof(chacha_key) <= sizeof(hash), "Size of hash must be at least that of chacha_key");
     epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
-    cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 0, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+    cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 0, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 0, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 0, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 
   inline void generate_chacha_key_prehashed(const void *data, size_t size, chacha_key& key, uint64_t kdf_rounds) {
     static_assert(sizeof(chacha_key) <= sizeof(hash), "Size of hash must be at least that of chacha_key");
     epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
-    cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 1, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+    cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 1, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 1, CN_LITE_PAGE_SIZE, CN_LITE_SCRATCHPAD, CN_LITE_ITERATIONS);
+      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 1, CN_PAGE_SIZE, CN_SCRATCHPAD, CN_ITERATIONS);
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 

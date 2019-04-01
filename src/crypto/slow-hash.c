@@ -258,7 +258,7 @@ extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *ex
 #define U64(x) ((uint64_t *) (x))
 #define R128(x) ((__m128i *) (x))
 
-#define state_index(x,div) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS /(div) - 1)) << 4)
+#define state_index(x) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS - 1)) << 4)
 #if defined(_MSC_VER)
 #if !defined(_WIN64)
 #define __mul() lo = mul128(c[0], b[0], &hi);
@@ -274,7 +274,7 @@ extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *ex
 #endif
 
 #define pre_aes() \
-  j = state_index(a,lightFlag); \
+  j = state_index(a); \
   _c = _mm_load_si128(R128(&hp_state[j])); \
   _a = _mm_load_si128(R128(a)); \
 
@@ -292,7 +292,7 @@ extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *ex
   _mm_store_si128(R128(c), _c); \
   _mm_store_si128(R128(&hp_state[j]), _mm_xor_si128(_b, _c)); \
   VARIANT1_1(&hp_state[j]); \
-  j = state_index(c,lightFlag); \
+  j = state_index(c); \
   p = U64(&hp_state[j]); \
   b[0] = p[0]; b[1] = p[1]; \
   VARIANT2_INTEGER_MATH_SSE2(b, c); \
@@ -613,16 +613,13 @@ void slow_hash_allocate_state(uint32_t page_size)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
     SetLockPagesPrivilege(GetCurrentProcess(), TRUE);
-    hp_state = (uint8_t *) VirtualAlloc(hp_state, page_size, MEM_LARGE_PAGES |
-                                        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    hp_state = (uint8_t *) VirtualAlloc(hp_state, page_size, MEM_LARGE_PAGES | MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
   defined(__DragonFly__) || defined(__NetBSD__)
-    hp_state = mmap(0, page_size, PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANON, 0, 0);
+    hp_state = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, 0, 0);
 #else
-    hp_state = mmap(0, page_size, PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+    hp_state = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
 #endif
     if(hp_state == MAP_FAILED)
         hp_state = NULL;
@@ -689,12 +686,11 @@ void slow_hash_free_state(uint32_t page_size)
  * @param length the length in bytes of the data
  * @param hash a pointer to a buffer in which the final 256 bit hash will be stored
  */
-void cn_slow_hash(const void *data, size_t length, char *hash, int light, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
+void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
 {
   uint32_t TOTALBLOCKS = (page_size / AES_BLOCK_SIZE);
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
 
   RDATA_ALIGN16 uint8_t expandedKey[240];  /* These buffers are aligned to use later with SSE functions */
 
@@ -880,12 +876,12 @@ union cn_slow_hash_state
  */
 #include <arm_neon.h>
 
-#define state_index(x,div) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS /(div) - 1)) << 4)
+#define state_index(x) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS - 1)) << 4)
 #define __mul() __asm__("mul %0, %1, %2\n\t" : "=r"(lo) : "r"(c[0]), "r"(b[0]) ); \
   __asm__("umulh %0, %1, %2\n\t" : "=r"(hi) : "r"(c[0]), "r"(b[0]) );
 
 #define pre_aes() \
-  j = state_index(a,lightFlag); \
+  j = state_index(a); \
   _c = vld1q_u8(&hp_state[j]); \
   _a = vld1q_u8((const uint8_t *)a); \
 
@@ -894,7 +890,7 @@ union cn_slow_hash_state
   vst1q_u8((uint8_t *)c, _c); \
   vst1q_u8(&hp_state[j], veorq_u8(_b, _c)); \
   VARIANT1_1(&hp_state[j]); \
-  j = state_index(c,lightFlag); \
+  j = state_index(c); \
   p = U64(&hp_state[j]); \
   b[0] = p[0]; b[1] = p[1]; \
   VARIANT2_PORTABLE_INTEGER_MATH(b, c); \
@@ -975,7 +971,7 @@ STATIC INLINE void aes_pseudo_round(const uint8_t *in, uint8_t *out, const uint8
 	uint8x16_t tmp;
 	int i;
 
-	for (i=0; i<nblocks; i++)
+	for(i = 0; i < nblocks; i++)
 	{
 		uint8x16_t tmp = vld1q_u8(in + i * AES_BLOCK_SIZE);
 		tmp = vaeseq_u8(tmp, zero);
@@ -1010,7 +1006,7 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
 	uint8x16_t tmp;
 	int i;
 
-	for (i=0; i<nblocks; i++)
+	for(i = 0; i < nblocks; i++)
 	{
 		uint8x16_t tmp = vld1q_u8(in + i * AES_BLOCK_SIZE);
 		tmp = vaeseq_u8(tmp, x[i]);
@@ -1060,12 +1056,11 @@ STATIC INLINE void aligned_free(void *ptr)
 }
 #endif /* FORCE_USE_HEAP */
 
-void cn_slow_hash(const void *data, size_t length, char *hash, int light, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
+void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
 {
   uint32_t TOTALBLOCKS = (page_size / AES_BLOCK_SIZE);
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
 
   RDATA_ALIGN16 uint8_t expandedKey[240];
 
@@ -1220,7 +1215,7 @@ STATIC void cn_mul128(const uint64_t *a, const uint64_t *b, uint64_t *r)
 STATIC void cn_mul128(const uint32_t *aa, const uint32_t *bb, uint32_t *r)
 {
   uint32_t t0, t1, t2=0, t3=0;
-__asm__ __volatile__(
+  __asm__ __volatile__(
   "umull %[t0], %[t1], %[a], %[b]\n\t"
   "str   %[t0], %[ll]\n\t"
 
@@ -1281,11 +1276,10 @@ STATIC INLINE void xor_blocks(uint8_t* a, const uint8_t* b)
   U64(a)[1] ^= U64(b)[1];
 }
 
-void cn_slow_hash(const void *data, size_t length, char *hash, int light, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
+void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
 {
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
 
   uint8_t text[INIT_SIZE_BYTE];
   uint8_t a[AES_BLOCK_SIZE];
@@ -1342,11 +1336,11 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 
   for(i = 0; i < aes_rounds; i++)
   {
-    #define MASK(div) ((uint32_t)(((page_size / AES_BLOCK_SIZE) / (div) - 1) << 4))
-    #define state_index(x,div) ((*(uint32_t *) x) & MASK(div))
+    #define MASK ((uint32_t)(((page_size / AES_BLOCK_SIZE) - 1) << 4))
+    #define state_index(x) ((*(uint32_t *) x) & MASK)
 
     // Iteration 1
-    j = state_index(a,lightFlag);
+    j = state_index(a);
     p = &long_state[j];
     aesb_single_round(p, p, a);
     copy_block(c1, p);
@@ -1356,7 +1350,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
     VARIANT1_1(p);
 
     // Iteration 2
-    j = state_index(c1,lightFlag);
+    j = state_index(c1);
     p = &long_state[j];
     copy_block(c, p);
 
@@ -1485,7 +1479,7 @@ union cn_slow_hash_state {
 };
 #pragma pack(pop)
 
-void cn_slow_hash(const void *data, size_t length, char *hash, int light, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
+void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed, uint32_t page_size, uint32_t scratchpad, uint32_t iterations)
 {
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
@@ -1530,7 +1524,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   }
 
   for (i = 0; i < AES_BLOCK_SIZE; i++) {
-    a[i] = state.k[     i] ^ state.k[AES_BLOCK_SIZE * 2 + i];
+    a[i] = state.k[i] ^ state.k[AES_BLOCK_SIZE * 2 + i];
     b[i] = state.k[AES_BLOCK_SIZE + i] ^ state.k[AES_BLOCK_SIZE * 3 + i];
   }
 
