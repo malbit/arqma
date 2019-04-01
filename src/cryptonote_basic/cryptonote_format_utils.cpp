@@ -1089,13 +1089,9 @@ namespace cryptonote
     {
       cn_arqma_lite_slow_hash_v2(bd.data(), bd.size(), res);
     }
-    else if (b.major_version >= 7)
-    {
-      cn_lite_slow_hash_v1(bd.data(), bd.size(), res);
-    }
     else
     {
-      cn_lite_slow_hash_v0(bd.data(), bd.size(), res);
+      cn_lite_slow_hash_v1(bd.data(), bd.size(), res);
     }
     return true;
   }
