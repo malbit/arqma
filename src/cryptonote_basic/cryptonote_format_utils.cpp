@@ -1197,7 +1197,7 @@ namespace cryptonote
   crypto::secret_key encrypt_key(crypto::secret_key key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
-    cn_slow_hash_v0(passphrase.data(), passphrase.size(), hash);
+    cn_lite_slow_hash_v1(passphrase.data(), passphrase.size(), hash);
     sc_add((unsigned char*)key.data, (const unsigned char*)key.data, (const unsigned char*)hash.data);
     return key;
   }
@@ -1205,7 +1205,7 @@ namespace cryptonote
   crypto::secret_key decrypt_key(crypto::secret_key key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
-    cn_slow_hash_v0(passphrase.data(), passphrase.size(), hash);
+    cn_lite_slow_hash_v1(passphrase.data(), passphrase.size(), hash);
     sc_sub((unsigned char*)key.data, (const unsigned char*)key.data, (const unsigned char*)hash.data);
     return key;
   }
