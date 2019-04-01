@@ -61,7 +61,7 @@ threadpool::~threadpool() {
     running = false;
     has_work.notify_all();
   }
-  for (size_t i = 0; i<threads.size(); i++) {
+  for (size_t i = 0; i < threads.size(); i++) {
     try { threads[i].join(); }
     catch (...) { /* ignore */ }
   }
