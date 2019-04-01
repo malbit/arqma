@@ -237,8 +237,8 @@ static void add_anchors(ub_ctx *ctx)
   const char * const *ds = ::get_builtin_ds();
   while (*ds)
   {
-	MINFO("adding trust anchor: " << *ds);
-	ub_ctx_add_ta(ctx, string_copy(*ds++));
+    MINFO("adding trust anchor: " << *ds);
+    ub_ctx_add_ta(ctx, string_copy(*ds++));
   }
 }
 
@@ -283,21 +283,21 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
   {
     // if no DNS_PUBLIC specified, we try a lookup to what we know
     // should be a valid DNSSEC record, and switch to known good
-	// DNSSEC resolvers if verification fails
-	bool available, valid;
-	static const char *probe_hostname = "";
-	auto records = get_txt_record(probe_hostname, available, valid);
-	if (!valid)
-	{
-	  MINFO("Failed to verify DNSSEC record from " << probe_hostname << ", falling back to well known DNSSEC resolvers");
-	  ub_ctx_delete(m_data->m_ub_context);
-	  m_data->m_ub_context = ub_ctx_create();
-	  add_anchors(m_data->m_ub_context);
-	  for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
-	    ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip));
-	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
-	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
-	}
+    // DNSSEC resolvers if verification fails
+    bool available, valid;
+    static const char *probe_hostname = "";
+    auto records = get_txt_record(probe_hostname, available, valid);
+    if (!valid)
+    {
+      MINFO("Failed to verify DNSSEC record from " << probe_hostname << ", falling back to well known DNSSEC resolvers");
+      ub_ctx_delete(m_data->m_ub_context);
+      m_data->m_ub_context = ub_ctx_create();
+      add_anchors(m_data->m_ub_context);
+      for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
+        ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip));
+      ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
+      ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
+    }
   }
 }
 
@@ -330,7 +330,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
   // call DNS resolver, blocking.  if return value not zero, something went wrong
   if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))
   {
-    dnssec_available = (result->secure || (!result->secure && result->bogus));
+    dnssec_available = (result->secure || result->bogus);
     dnssec_valid = result->secure && !result->bogus;
     if (result->havedata)
     {
