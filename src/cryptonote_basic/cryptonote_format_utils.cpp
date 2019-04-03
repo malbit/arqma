@@ -849,7 +849,7 @@ namespace cryptonote
   {
     if (decimal_point == (unsigned int)-1)
       decimal_point = default_decimal_point;
-    switch (std::atomic_load(&default_decimal_point))
+    switch (decimal_point)
     {
       case 9:
         return "arq";
@@ -860,7 +860,7 @@ namespace cryptonote
       case 0:
         return "nanoarq";
       default:
-        ASSERT_MES_AND_THROW("Invalid decimal point specification: " << default_decimal_point);
+        ASSERT_MES_AND_THROW("Invalid decimal point specification: " << decimal_point);
     }
   }
   //---------------------------------------------------------------
@@ -1084,13 +1084,14 @@ namespace cryptonote
   bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
-
-	int cn_variant;
-    if(b.major_version >= 7) {
-      cn_variant = 1;
+    int cn_variant;
+    if(b.major_version >= 12) {
+      cn_variant = 2;
+	  } else if(b.major_version >= 7) {
+	    cn_variant = 1;
 	  } else {
-	    cn_variant = 0;
-	  }
+      cn_variant = 0;
+    }
 
     //const int cn_variant = b.major_version >= 7 ? b.major_version - 6 : 0;
     crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);

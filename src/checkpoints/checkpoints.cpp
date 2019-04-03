@@ -101,11 +101,11 @@ namespace cryptonote
 
     if(it->second == h)
     {
-      MINFO("CHECKPOINT PASSED FOR HEIGHT " << height << " " << h);
+      MINFO("CHECKPOINT PASSED FOR HEIGHT: " << height << " " << h);
       return true;
     }else
     {
-      MWARNING("CHECKPOINT FAILED FOR HEIGHT " << height << ". EXPECTED HASH: " << it->second << ", FETCHED HASH: " << h);
+      MWARNING("CHECKPOINT FAILED FOR HEIGHT: " << height << ". EXPECTED HASH: " << it->second << ", FETCHED HASH: " << h);
       return false;
     }
   }
@@ -250,11 +250,11 @@ namespace cryptonote
       uint64_t height;
       height = it->height;
       if (height <= prev_max_height) {
-	LOG_PRINT_L1("ignoring checkpoint height " << height);
+        LOG_PRINT_L1("ignoring checkpoint height " << height);
       } else {
-	std::string blockhash = it->hash;
-	LOG_PRINT_L1("Adding checkpoint height " << height << ", hash=" << blockhash);
-	ADD_CHECKPOINT(height, blockhash);
+        std::string blockhash = it->hash;
+        LOG_PRINT_L1("Adding checkpoint height " << height << ", hash=" << blockhash);
+        ADD_CHECKPOINT(height, blockhash);
       }
       ++it;
     }
