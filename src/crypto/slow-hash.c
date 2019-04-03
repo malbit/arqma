@@ -47,13 +47,13 @@
 
 #define MEMORY 		      (1 << 20) // 1MB scratchpad
 #define ITER         		 0x40000
-//#define MASK		        1048576
+#define MASK		         0xFFFF0
 #define CN_INIT (MEMORY / INIT_SIZE_BYTE)
 #define CN_AES_INIT (MEMORY / AES_BLOCK_SIZE)
 
 #define MEMORY_V2	       (1 << 18) // 256kB scratchpad
-#define ITER_V2      		 0x10000
-//#define MASK_V2	         262144
+#define ITER_V2      		  0x10000
+#define MASK_V2	          0x1FFF0
 #define CN_INIT_V2 (MEMORY_V2 / INIT_SIZE_BYTE)
 #define CN_AES_INIT_V2 (MEMORY_V2 / AES_BLOCK_SIZE)
 
@@ -1348,8 +1348,10 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 
     for(i = 0; i < aes_rounds / 2; i++)
     {
-      #define MASK ((uint32_t)(((MEMORY / AES_BLOCK_SIZE) - 1) << 4))
-      #define state_index(x) ((*(uint32_t *) x) & MASK)
+      size_t memory_mask = (variant >= 2 ? MASK_V2 : MASK);
+
+      //#define MASK ((uint32_t)(((MEMORY / AES_BLOCK_SIZE) - 1) << 4))
+      #define state_index(x) ((*(uint32_t *) x) & memory_mask)
 
       // Iteration 1
       j = state_index(a);
@@ -1496,9 +1498,9 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
   size_t aes_init = (variant >= 2 ? CN_AES_INIT_V2 : CN_AES_INIT);
 
 #ifndef FORCE_USE_HEAP
-  uint8_t long_state[MEMORY()];
+  uint8_t long_state[MEMORY];
 #else
-  uint8_t *long_state = (uint8_t *)malloc(MEMORY());
+  uint8_t *long_state = (uint8_t *)malloc(MEMORY;
 #endif
 
   union cn_slow_hash_state state;
