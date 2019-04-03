@@ -1421,7 +1421,8 @@ void slow_hash_free_state(void)
   return;
 }
 
-static void (*const extra_hashes[4])(const void *, size_t, char *) = {
+static void (*const extra_hashes[4])(const void *, size_t, char *) =
+{
   hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
 };
 
@@ -1452,7 +1453,8 @@ static void sum_half_blocks(uint8_t* a, const uint8_t* b) {
 }
 #define U64(x) ((uint64_t *) (x))
 
-static void copy_block(uint8_t* dst, const uint8_t* src) {
+static void copy_block(uint8_t* dst, const uint8_t* src)
+{
   memcpy(dst, src, AES_BLOCK_SIZE);
 }
 
@@ -1492,7 +1494,8 @@ union cn_slow_hash_state {
 };
 #pragma pack(pop)
 
-void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed) {
+void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed)
+{
   size_t init_rounds = (variant >= 2 ? CN_INIT_V2 : CN_INIT);
   size_t aes_rounds = (variant >= 2 ? ITER_V2 : ITER);
   size_t aes_init = (variant >= 2 ? CN_AES_INIT_V2 : CN_AES_INIT);
@@ -1500,7 +1503,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
   uint8_t long_state[MEMORY];
 #else
-  uint8_t *long_state = (uint8_t *)malloc(MEMORY;
+  uint8_t *long_state = (uint8_t *)malloc(MEMORY);
 #endif
 
   union cn_slow_hash_state state;
@@ -1514,7 +1517,8 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
   uint8_t aes_key[AES_KEY_SIZE];
   oaes_ctx *aes_ctx;
 
-  if (prehashed) {
+  if (prehashed)
+  {
     memcpy(&state.hs, data, length);
   } else {
     hash_process(&state.hs, data, length);
