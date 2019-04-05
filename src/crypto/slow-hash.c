@@ -45,17 +45,20 @@
 #define INIT_SIZE_BLK   8
 #define INIT_SIZE_BYTE (INIT_SIZE_BLK * AES_BLOCK_SIZE)
 
-#define MEMORY 		     0x100000 // 1MB scratchpad
+#define MEMORY_CN 		     0x100000 // 1MB scratchpad
 #define ITER         	  0x40000
 #define MASK		      0xFFFF0
-#define CN_INIT (MEMORY / INIT_SIZE_BYTE)
-#define CN_AES_INIT (MEMORY / AES_BLOCK_SIZE)
+#define CN_INIT (MEMORY_CN / INIT_SIZE_BYTE)
+#define CN_AES_INIT (MEMORY_CN / AES_BLOCK_SIZE)
 
 #define MEMORY_V2	      0x40000 // 256kB scratchpad
 #define ITER_V2      	  0x10000
 #define MASK_V2	          0x1FFF0
 #define CN_INIT_V2 (MEMORY_V2 / INIT_SIZE_BYTE)
 #define CN_AES_INIT_V2 (MEMORY_V2 / AES_BLOCK_SIZE)
+
+int variant;
+#define MEMORY() (variant >= 2 ? 0x40000 : 0x100000)
 
 extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
@@ -264,7 +267,7 @@ do if (variant == 1) \
 #define ASM __asm
 #endif
 
-#define TOTALBLOCKS (MEMORY / AES_BLOCK_SIZE)
+#define TOTALBLOCKS (MEMORY() / AES_BLOCK_SIZE)
 
 #define U64(x) ((uint64_t *) (x))
 #define R128(x) ((__m128i *) (x))
@@ -625,13 +628,13 @@ void slow_hash_allocate_state(void)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
     SetLockPagesPrivilege(GetCurrentProcess(), TRUE);
-    hp_state = (uint8_t *) VirtualAlloc(hp_state, MEMORY, MEM_LARGE_PAGES | MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    hp_state = (uint8_t *) VirtualAlloc(hp_state, MEMORY(), MEM_LARGE_PAGES | MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
   defined(__DragonFly__) || defined(__NetBSD__)
-    hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, 0, 0);
+    hp_state = mmap(0, MEMORY(), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, 0, 0);
 #else
-    hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+    hp_state = mmap(0, MEMORY(), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
 #endif
     if(hp_state == MAP_FAILED)
         hp_state = NULL;
@@ -640,7 +643,7 @@ void slow_hash_allocate_state(void)
     if(hp_state == NULL)
     {
         hp_allocated = 0;
-        hp_state = (uint8_t *) malloc(MEMORY);
+        hp_state = (uint8_t *) malloc(MEMORY());
     }
 }
 
@@ -660,7 +663,7 @@ void slow_hash_free_state(void)
 #if defined(_MSC_VER) || defined(__MINGW32__)
         VirtualFree(hp_state, 0, MEM_RELEASE);
 #else
-        munmap(hp_state, MEMORY);
+        munmap(hp_state, MEMORY());
 #endif
     }
 
@@ -887,7 +890,7 @@ union cn_slow_hash_state
  */
 #include <arm_neon.h>
 
-#define TOTALBLOCKS (MEMORY / AES_BLOCK_SIZE)
+#define TOTALBLOCKS (MEMORY() / AES_BLOCK_SIZE)
 
 #define state_index(x) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS - 1)) << 4)
 #define __mul() __asm__("mul %0, %1, %2\n\t" : "=r"(lo) : "r"(c[0]), "r"(b[0]) ); \
@@ -1076,9 +1079,9 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
     RDATA_ALIGN16 uint8_t expandedKey[240];
 
 #ifndef FORCE_USE_HEAP
-    RDATA_ALIGN16 uint8_t hp_state[MEMORY];
+    RDATA_ALIGN16 uint8_t hp_state[MEMORY()];
 #else
-    uint8_t *hp_state = (uint8_t *)aligned_malloc(MEMORY,16);
+    uint8_t *hp_state = (uint8_t *)aligned_malloc(MEMORY(),16);
 #endif
 
     uint8_t text[INIT_SIZE_BYTE];
@@ -1312,11 +1315,11 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
     };
 
 #ifndef FORCE_USE_HEAP
-    uint8_t long_state[MEMORY];
+    uint8_t long_state[MEMORY()];
 #else
     //uint8_t *long_state = NULL;
     //long_state = (uint8_t *)malloc(MEMORY);
-    uint8_t *long_state = (uint8_t *)malloc(MEMORY);
+    uint8_t *long_state = (uint8_t *)malloc(MEMORY());
 #endif
 
     if (prehashed) {
@@ -1501,9 +1504,9 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
   size_t aes_init = (variant >= 2 ? CN_AES_INIT_V2 : CN_AES_INIT);
 
 #ifndef FORCE_USE_HEAP
-  uint8_t long_state[MEMORY];
+  uint8_t long_state[MEMORY()];
 #else
-  uint8_t *long_state = (uint8_t *)malloc(MEMORY);
+  uint8_t *long_state = (uint8_t *)malloc(MEMORY());
 #endif
 
   union cn_slow_hash_state state;
