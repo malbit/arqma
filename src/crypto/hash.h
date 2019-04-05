@@ -47,14 +47,14 @@ namespace crypto {
 
 #pragma pack(push, 1)
   POD_CLASS hash {
-    char data[HASH_SIZE];
+    char data[hash_size];
   };
   POD_CLASS hash8 {
     char data[8];
   };
 #pragma pack(pop)
 
-  static_assert(sizeof(hash) == HASH_SIZE, "Invalid structure size");
+  static_assert(sizeof(hash) == hash_size, "Invalid structure size");
   static_assert(sizeof(hash8) == 8, "Invalid structure size");
 
   /*
@@ -80,7 +80,7 @@ namespace crypto {
   }
 
   inline void tree_hash(const hash *hashes, std::size_t count, hash &root_hash) {
-    tree_hash(reinterpret_cast<const char (*)[HASH_SIZE]>(hashes), count, reinterpret_cast<char *>(&root_hash));
+    tree_hash(reinterpret_cast<const char (*)[hash_size]>(hashes), count, reinterpret_cast<char *>(&root_hash));
   }
 
   inline std::ostream &operator <<(std::ostream &o, const crypto::hash &v) {

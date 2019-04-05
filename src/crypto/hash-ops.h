@@ -74,8 +74,8 @@ void hash_process(union hash_state *state, const uint8_t *buf, size_t count);
 #endif
 
 enum {
-  HASH_SIZE = 32,
-  HASH_DATA_AREA = 136
+  const int hash_size = 32,
+  const int hash_data_area = 136
 };
 
 void cn_fast_hash(const void *data, size_t length, char *hash);
