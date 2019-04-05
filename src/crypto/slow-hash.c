@@ -45,14 +45,14 @@
 #define INIT_SIZE_BLK   8
 #define INIT_SIZE_BYTE (INIT_SIZE_BLK * AES_BLOCK_SIZE)
 
-#define MEMORY 		      (1 << 20) // 1MB scratchpad
-#define ITER         		 0x40000
-#define MASK		         0xFFFF0
+#define MEMORY 		     0x100000 // 1MB scratchpad
+#define ITER         	  0x40000
+#define MASK		      0xFFFF0
 #define CN_INIT (MEMORY / INIT_SIZE_BYTE)
 #define CN_AES_INIT (MEMORY / AES_BLOCK_SIZE)
 
-#define MEMORY_V2	       (1 << 18) // 256kB scratchpad
-#define ITER_V2      		  0x10000
+#define MEMORY_V2	      0x40000 // 256kB scratchpad
+#define ITER_V2      	  0x10000
 #define MASK_V2	          0x1FFF0
 #define CN_INIT_V2 (MEMORY_V2 / INIT_SIZE_BYTE)
 #define CN_AES_INIT_V2 (MEMORY_V2 / AES_BLOCK_SIZE)
