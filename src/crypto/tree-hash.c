@@ -90,8 +90,10 @@ void tree_hash(const char (*hashes)[HASH_SIZE], size_t count, char *root_hash) {
 
     size_t cnt = tree_hash_cnt( count );
 
-    char ints[cnt][HASH_SIZE];
-    memset(ints, 0 , sizeof(ints));
+    char (*ints)[HASH_SIZE];
+	size_t ints_size = cnt * HASH_SIZE;
+	ints = alloca(ints_size);
+	memset( ints , 0 , ints_size);
 
     memcpy(ints, hashes, (2 * cnt - count) * HASH_SIZE);
 
