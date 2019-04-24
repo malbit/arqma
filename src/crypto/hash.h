@@ -85,7 +85,7 @@ namespace crypto {
       case cn_slow_hash_type::cn_lite_v1:
       {
         static thread_local cn_lite_hash_v1 v1;
-        v1.hash(data, length, hash.data)
+        v1.hash(data, length, hash.data);
       }
       break;
 
