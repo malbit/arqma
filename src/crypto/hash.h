@@ -1,21 +1,21 @@
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -25,19 +25,20 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
 
 #include <stddef.h>
 #include <iostream>
-#include <boost/utility/value_init.hpp>
+//#include <boost/utility/value_init.hpp>
 
 #include "common/pod-class.h"
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
+#include "cn_old_hash.hpp"
 
 namespace crypto {
 
@@ -71,12 +72,67 @@ namespace crypto {
     return h;
   }
 
+/*
   inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
+    //cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
+    static thread_local cn_pow_hash_v1 ctx1;
+    static thread_local cn_pow_hash_v2 ctx2;
+    if (variant == 0) {
+      ctx1.hash(data, length, hash.data);
+    } else {
+      ctx2.hash(data, length, hash.data);
+    }
   }
 
   inline void cn_slow_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+    //cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+    static thread_local cn_pow_hash_v1 ctx1;
+    static thread_local cn_pow_hash_v2 ctx2;
+    if (variant == 0) {
+      ctx1.hash(data, length, hash.data, true);
+    } else {
+      ctx2.hash(data, length, hash.data, true);
+    }
+  }
+*/
+
+  enum struct cn_slow_hash_type
+  {
+      old_v1,
+      old_v2,
+      turtle_lite_v2,
+  };
+
+  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, cn_slow_hash_type type) {
+    switch(type)
+    {
+      case cn_slow_hash_type::old_v1:
+      case cn_slow_hash_type::old_v2:
+      {
+        static thread_local cn_old_hash_v2 v2;
+        static thread_local cn_old_hash_v1 v1 = cn_old_hash_v1::make_borrowed(v2);
+
+        if (type == cn_slow_hash_type::old_v1) v1.hash(data, length, hash.data);
+        else                                   v2.hash(data, length, hash.data);
+      }
+      break;
+
+      case cn_slow_hash_type::turtle_lite_v2:
+      default:
+      {
+         const uint32_t CN_TURTLE_PAGE_SIZE = 262144;
+         const uint32_t CN_TURTLE_SCRATCHPAD = 262144;
+         const uint32_t CN_TURTLE_ITERATIONS = 131072;
+         cn_turtle_hash(data,
+             length,
+             hash.data,
+             1, // light
+             2, // variant
+             0, // pre-hashed
+             CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
+      }
+      break;
+    }
   }
 
   inline void tree_hash(const hash *hashes, std::size_t count, hash &root_hash) {
@@ -90,8 +146,8 @@ namespace crypto {
     epee::to_hex::formatted(o, epee::as_byte_span(v)); return o;
   }
 
-  const static crypto::hash null_hash = boost::value_initialized<crypto::hash>();
-  const static crypto::hash8 null_hash8 = boost::value_initialized<crypto::hash8>();
+  const static crypto::hash null_hash = {}; //boost::value_initialized<crypto::hash>();
+  const static crypto::hash8 null_hash8 = {}; //boost::value_initialized<crypto::hash8>();
 }
 
 CRYPTO_MAKE_HASHABLE(hash)

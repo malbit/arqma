@@ -79,8 +79,8 @@ using namespace epee;
 #include "miner.h"
 
 
-extern "C" void slow_hash_allocate_state();
-extern "C" void slow_hash_free_state();
+//extern "C" void slow_hash_allocate_state();
+//extern "C" void slow_hash_free_state();
 namespace cryptonote
 {
 
@@ -441,7 +441,7 @@ namespace cryptonote
     difficulty_type local_diff = 0;
     uint32_t local_template_ver = 0;
     block b;
-    slow_hash_allocate_state();
+    //slow_hash_allocate_state();
     while(!m_stop)
     {
       if(m_pausers_count)//anti split workaround
@@ -503,7 +503,7 @@ namespace cryptonote
       nonce+=m_threads_total;
       ++m_hashes;
     }
-    slow_hash_free_state();
+    //slow_hash_free_state();
     MGINFO("Miner thread stopped ["<< th_local_index << "]");
     return true;
   }
