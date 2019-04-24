@@ -40,9 +40,6 @@
 #include "oaes_lib.h"
 #include "variant2_int_sqrt.h"
 
-//#define MEMORY 		     (1 << 20) // 1MB scratchpad
-//#define ITER         		0x40000
-//#define MASK		        0xFFFF0
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
 #define INIT_SIZE_BLK   8

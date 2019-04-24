@@ -32,13 +32,12 @@
 
 #include <stddef.h>
 #include <iostream>
-//#include <boost/utility/value_init.hpp>
 
 #include "common/pod-class.h"
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
-#include "cn_old_hash.hpp"
+#include "crypto/cn_lite/cn_lite_hash.hpp"
 
 namespace crypto {
 
@@ -72,48 +71,21 @@ namespace crypto {
     return h;
   }
 
-/*
-  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    //cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
-    static thread_local cn_pow_hash_v1 ctx1;
-    static thread_local cn_pow_hash_v2 ctx2;
-    if (variant == 0) {
-      ctx1.hash(data, length, hash.data);
-    } else {
-      ctx2.hash(data, length, hash.data);
-    }
-  }
-
-  inline void cn_slow_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    //cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
-    static thread_local cn_pow_hash_v1 ctx1;
-    static thread_local cn_pow_hash_v2 ctx2;
-    if (variant == 0) {
-      ctx1.hash(data, length, hash.data, true);
-    } else {
-      ctx2.hash(data, length, hash.data, true);
-    }
-  }
-*/
-
   enum struct cn_slow_hash_type
   {
-      old_v1,
-      old_v2,
+      cn_lite_v0,
+      cn_lite_v1,
       turtle_lite_v2,
   };
 
   inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, cn_slow_hash_type type) {
     switch(type)
     {
-      case cn_slow_hash_type::old_v1:
-      case cn_slow_hash_type::old_v2:
+      case cn_slow_hash_type::cn_lite_v0:
+      case cn_slow_hash_type::cn_lite_v1:
       {
-        static thread_local cn_old_hash_v2 v2;
-        static thread_local cn_old_hash_v1 v1 = cn_old_hash_v1::make_borrowed(v2);
-
-        if (type == cn_slow_hash_type::old_v1) v1.hash(data, length, hash.data);
-        else                                   v2.hash(data, length, hash.data);
+        static thread_local cn_lite_hash_v1 v1;
+        v1.hash(data, length, hash.data)
       }
       break;
 

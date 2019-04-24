@@ -45,9 +45,8 @@ set(crypto_sources
   oaes_lib.c
   random.c
   skein.c
-  cn_old_hash_hard_arm.cpp
-  cn_old_hash_hard_intel.cpp
-  cn_old_hash_soft.cpp
+  cn_lite/cn_lite_hash_hard_intel.cpp
+  cn_lite/cn_lite_hash_soft.cpp
   cn_turtle_hash.c
   tree-hash.c)
 
@@ -71,7 +70,7 @@ set(crypto_private_headers
   random.h
   skein.h
   skein_port.h
-  cn_old_hash.hpp)
+  cn_lite/cn_lite_hash.hpp)
 
 arqma_private_headers(cncrypto
   ${crypto_private_headers})

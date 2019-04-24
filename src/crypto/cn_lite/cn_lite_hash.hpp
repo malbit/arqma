@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2017, SUMOKOIN
 //
 // All rights reserved.
@@ -43,7 +44,7 @@
 #define HAS_WIN_INTRIN_API
 #endif
 
-// Note HAS_INTEL_HW and HAS_ARM_HW only mean we can emit the AES instructions
+// Note HAS_INTEL_HW and future HAS_ARM_HW only mean we can emit the AES instructions
 // check CPU support for the hardware AES encryption has to be done at runtime
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X86) || defined(_M_X64)
 #ifdef __GNUC__
@@ -54,14 +55,6 @@
 #endif // !defined(HAS_WIN_INTRIN_API)
 #endif // __GNUC__
 #define HAS_INTEL_HW
-#endif
-
-#if defined(__aarch64__)
-#pragma GCC target ("+crypto")
-#include <sys/auxv.h>
-#include <asm/hwcap.h>
-#include <arm_neon.h>
-#define HAS_ARM_HW
 #endif
 
 #ifdef HAS_INTEL_HW
@@ -90,7 +83,7 @@ inline bool hw_check_aes()
 #ifdef HAS_ARM_HW
 inline bool hw_check_aes()
 {
-	return (getauxval(AT_HWCAP) & HWCAP_AES) != 0;
+	return false;
 }
 #endif
 
@@ -102,88 +95,63 @@ inline bool hw_check_aes()
 #endif
 
 // This cruft avoids casting-galore and allows us not to worry about sizeof(void*)
-class cn_sptr
+union cn_sptr
 {
-public:
-	cn_sptr() : base_ptr(nullptr) {}
-	cn_sptr(uint64_t* ptr) { base_ptr = ptr; }
-	cn_sptr(uint32_t* ptr) { base_ptr = ptr; }
-	cn_sptr(uint8_t* ptr) { base_ptr = ptr; }
+	cn_sptr() : as_void(nullptr) {}
+	cn_sptr(uint64_t* ptr) { as_uqword = ptr; }
+	cn_sptr(uint32_t* ptr) { as_udword = ptr; }
+	cn_sptr(uint8_t* ptr) { as_byte = ptr; }
 #ifdef HAS_INTEL_HW
-	cn_sptr(__m128i* ptr) { base_ptr = ptr; }
+	cn_sptr(__m128i* ptr) { as_xmm = ptr; }
 #endif
 
-	inline void set(void* ptr) { base_ptr = ptr; }
-	inline cn_sptr offset(size_t i) { return reinterpret_cast<uint8_t*>(base_ptr)+i; }
-	inline const cn_sptr offset(size_t i) const { return reinterpret_cast<uint8_t*>(base_ptr)+i; }
-
-	inline void* as_void() { return base_ptr; }
-	inline uint8_t& as_byte(size_t i) { return *(reinterpret_cast<uint8_t*>(base_ptr)+i); }
-	inline uint8_t* as_byte() { return reinterpret_cast<uint8_t*>(base_ptr); }
-	inline uint64_t& as_uqword(size_t i) { return *(reinterpret_cast<uint64_t*>(base_ptr)+i); }
-	inline const uint64_t& as_uqword(size_t i) const { return *(reinterpret_cast<uint64_t*>(base_ptr)+i); }
-	inline uint64_t* as_uqword() { return reinterpret_cast<uint64_t*>(base_ptr); }
-	inline const uint64_t* as_uqword() const { return reinterpret_cast<uint64_t*>(base_ptr); }
-	inline int64_t& as_qword(size_t i) { return *(reinterpret_cast<int64_t*>(base_ptr)+i); }
-	inline int32_t& as_dword(size_t i) { return *(reinterpret_cast<int32_t*>(base_ptr)+i); }
-	inline uint32_t& as_udword(size_t i) { return *(reinterpret_cast<uint32_t*>(base_ptr)+i); }
-	inline const uint32_t& as_udword(size_t i) const { return *(reinterpret_cast<uint32_t*>(base_ptr)+i); }
+	void* as_void;
+	uint8_t* as_byte;
+	uint64_t* as_uqword;
+	int32_t* as_dword;
+	uint32_t* as_udword;
 #ifdef HAS_INTEL_HW
-	inline __m128i* as_xmm() { return reinterpret_cast<__m128i*>(base_ptr); }
+	__m128i* as_xmm;
 #endif
-private:
-	void* base_ptr;
 };
 
-template<size_t MEMORY, size_t ITER, size_t VERSION> class cn_old_hash;
-using cn_old_hash_v1 = cn_old_hash<2*1024*1024, 0x80000, 0>;
-using cn_old_hash_v2 = cn_old_hash<1*1024*1024, 0x40000, 1>;
-
-template<size_t MEMORY, size_t ITER, size_t VERSION>
-class cn_old_hash
+template<size_t MEMORY, size_t ITER>
+class cn_lite_hash
 {
 public:
-	cn_old_hash() : borrowed_pad(false)
+	cn_lite_hash()
 	{
 #if !defined(HAS_WIN_INTRIN_API)
-		lpad.set(aligned_alloc(4096, MEMORY));
-		spad.set(aligned_alloc(4096, 4096));
+		lpad.as_void = aligned_alloc(4096, MEMORY);
+		spad.as_void = aligned_alloc(4096, 4096);
 #else
-		lpad.set(_aligned_malloc(MEMORY, 4096));
-		spad.set(_aligned_malloc(4096, 4096));
+		lpad.as_void = _aligned_malloc(MEMORY, 4096);
+		spad.as_void = _aligned_malloc(4096, 4096);
 #endif
 	}
 
-	cn_old_hash (cn_old_hash&& other) noexcept : lpad(other.lpad.as_byte()), spad(other.spad.as_byte()), borrowed_pad(other.borrowed_pad)
+	cn_lite_hash (cn_lite_hash&& other) noexcept : lpad(other.lpad.as_byte), spad(other.spad.as_byte)
 	{
-		other.lpad.set(nullptr);
-		other.spad.set(nullptr);
+		other.lpad.as_byte = nullptr;
+		other.spad.as_byte = nullptr;
 	}
 
-	// Factory function enabling to temporaliy turn v2 object into v1
-	// It is caller's responsibility to ensure that v2 object is not hashing at the same time!!
-	static cn_old_hash_v1 make_borrowed(cn_old_hash_v2& t)
-	{
-		return cn_old_hash_v1(t.lpad.as_void(), t.spad.as_void());
-	}
-
-	cn_old_hash& operator= (cn_old_hash&& other) noexcept
+	cn_lite_hash& operator= (cn_lite_hash&& other) noexcept
     {
 		if(this == &other)
 			return *this;
 
 		free_mem();
-		lpad.set(other.lpad.as_void());
-		spad.set(other.spad.as_void());
-		borrowed_pad = other.borrowed_pad;
+		lpad.as_byte = other.lpad.as_byte;
+		spad.as_byte = spad.as_byte;
 		return *this;
 	}
 
 	// Copying is going to be really inefficient
-	cn_old_hash(const cn_old_hash& other) = delete;
-	cn_old_hash& operator= (const cn_old_hash& other) = delete;
+	cn_lite_hash(const cn_lite_hash& other) = delete;
+	cn_lite_hash& operator= (const cn_lite_hash& other) = delete;
 
-	~cn_old_hash()
+	~cn_lite_hash()
 	{
 		free_mem();
 	}
@@ -206,16 +174,6 @@ public:
 
 private:
 	static constexpr size_t MASK = ((MEMORY-1) >> 4) << 4;
-	friend cn_old_hash_v1;
-	friend cn_old_hash_v2;
-
-	// Constructor enabling v1 hash to borrow v2's buffer
-	cn_old_hash(void* lptr, void* sptr)
-	{
-		lpad.set(lptr);
-		spad.set(sptr);
-		borrowed_pad = true;
-	}
 
 	inline bool check_override()
 	{
@@ -233,26 +191,22 @@ private:
 
 	inline void free_mem()
 	{
-		if(!borrowed_pad)
-		{
 #if !defined(HAS_WIN_INTRIN_API)
-			if(lpad.as_void() != nullptr)
-				free(lpad.as_void());
-			if(lpad.as_void() != nullptr)
-				free(spad.as_void());
+		if(lpad.as_void != nullptr)
+			free(lpad.as_void);
+		if(lpad.as_void != nullptr)
+			free(spad.as_void);
 #else
-			if(lpad.as_void() != nullptr)
-				_aligned_free(lpad.as_void());
-			if(lpad.as_void() != nullptr)
-				_aligned_free(spad.as_void());
+		if(lpad.as_void != nullptr)
+			_aligned_free(lpad.as_void);
+		if(lpad.as_void != nullptr)
+			_aligned_free(spad.as_void);
 #endif
-		}
-
-		lpad.set(nullptr);
-		spad.set(nullptr);
+		lpad.as_void = nullptr;
+		spad.as_void = nullptr;
 	}
 
-	inline cn_sptr scratchpad_ptr(uint32_t idx) { return lpad.as_byte() + (idx & MASK); }
+	inline cn_sptr scratchpad_ptr(uint32_t idx) { return lpad.as_byte + (idx & MASK); }
 
 #if !defined(HAS_INTEL_HW) && !defined(HAS_ARM_HW)
 	inline void explode_scratchpad_hard() { assert(false); }
@@ -267,8 +221,8 @@ private:
 
 	cn_sptr lpad;
 	cn_sptr spad;
-	bool borrowed_pad;
 };
 
-extern template class cn_old_hash<2*1024*1024, 0x80000, 0>;
-extern template class cn_old_hash<1*1024*1024, 0x40000, 1>;
+using cn_lite_hash_v1 = cn_lite_hash<1*1024*1024, 0x40000>;
+
+extern template class cn_lite_hash<1*1024*1024, 0x40000>;
