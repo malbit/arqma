@@ -32,10 +32,10 @@
 
 #pragma once
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -95,134 +95,170 @@ inline bool hw_check_aes()
 #endif
 
 // This cruft avoids casting-galore and allows us not to worry about sizeof(void*)
-union cn_sptr
+class cn_sptr
 {
-	cn_sptr() : as_void(nullptr) {}
-	cn_sptr(uint64_t* ptr) { as_uqword = ptr; }
-	cn_sptr(uint32_t* ptr) { as_udword = ptr; }
-	cn_sptr(uint8_t* ptr) { as_byte = ptr; }
+  public:
+	  cn_sptr() : base_ptr(nullptr) {}
+	  cn_sptr(uint64_t* ptr) { base_ptr = ptr; }
+	  cn_sptr(uint32_t* ptr) { base_ptr = ptr; }
+	  cn_sptr(uint8_t* ptr) { base_ptr = ptr; }
 #ifdef HAS_INTEL_HW
-	cn_sptr(__m128i* ptr) { as_xmm = ptr; }
+	  cn_sptr(__m128i* ptr) { base_ptr = ptr; }
 #endif
 
-	void* as_void;
-	uint8_t* as_byte;
-	uint64_t* as_uqword;
-	int32_t* as_dword;
-	uint32_t* as_udword;
+	inline void set(void* ptr) { base_ptr = ptr; }
+	inline cn_sptr offset(size_t i) { return reinterpret_cast<uint8_t*>(base_ptr) + i; }
+	inline const cn_sptr offset(size_t i) const { return reinterpret_cast<uint8_t*>(base_ptr) + i; }
+
+	inline void* as_void() { return base_ptr; }
+	inline uint8_t& as_byte(size_t i) { return *(reinterpret_cast<uint8_t*>(base_ptr) + i); }
+	inline uint8_t* as_byte() { return reinterpret_cast<uint8_t*>(base_ptr); }
+	inline uint64_t& as_uqword(size_t i) { return *(reinterpret_cast<uint64_t*>(base_ptr) + i); }
+	inline const uint64_t& as_uqword(size_t i) const { return *(reinterpret_cast<uint64_t*>(base_ptr) + i); }
+	inline uint64_t* as_uqword() { return reinterpret_cast<uint64_t*>(base_ptr); }
+	inline const uint64_t* as_uqword() const { return reinterpret_cast<uint64_t*>(base_ptr); }
+	inline int64_t& as_qword(size_t i) { return *(reinterpret_cast<int64_t*>(base_ptr) + i); }
+	inline int32_t& as_dword(size_t i) { return *(reinterpret_cast<int32_t*>(base_ptr) + i); }
+	inline uint32_t& as_udword(size_t i) { return *(reinterpret_cast<uint32_t*>(base_ptr) + i); }
+	inline const uint32_t& as_udword(size_t i) const { return *(reinterpret_cast<uint32_t*>(base_ptr) + i); }
 #ifdef HAS_INTEL_HW
-	__m128i* as_xmm;
+	inline __m128i* as_xmm() { return reinterpret_cast<__m128i*>(base_ptr); }
 #endif
+  private:
+	  void* base_ptr;
 };
 
-template<size_t MEMORY, size_t ITER>
+template <size_t MEMORY, size_t ITER, size_t VERSION> class cn_lite_hash;
+using cn_lite_hash_v0 = cn_lite_hash<1*1024*1024, 0x40000, 0>;
+using cn_lite_hash_v1 = cn_lite_hash<1*1024*1024, 0x40000, 1>;
+
+template <size_t MEMORY, size_t ITER, size_t VERSION>
 class cn_lite_hash
 {
-public:
-	cn_lite_hash()
-	{
+  public:
+	  cn_lite_hash() : borrowed_pad(false)
+	  {
 #if !defined(HAS_WIN_INTRIN_API)
-		lpad.as_void = aligned_alloc(4096, MEMORY);
-		spad.as_void = aligned_alloc(4096, 4096);
+		  lpad.set(aligned_alloc(4096, MEMORY));
+		  spad.set(aligned_alloc(4096, 4096));
 #else
-		lpad.as_void = _aligned_malloc(MEMORY, 4096);
-		spad.as_void = _aligned_malloc(4096, 4096);
+		  lpad.set(_aligned_malloc(MEMORY, 4096));
+		  spad.set(_aligned_malloc(4096, 4096));
 #endif
-	}
+	  }
 
-	cn_lite_hash (cn_lite_hash&& other) noexcept : lpad(other.lpad.as_byte), spad(other.spad.as_byte)
-	{
-		other.lpad.as_byte = nullptr;
-		other.spad.as_byte = nullptr;
-	}
+	  cn_lite_hash(cn_lite_hash&& other) noexcept : lpad(other.lpad.as_byte()), spad(other.spad.as_byte()), borrowed_pad(other.borrowed_pad)
+	  {
+		  other.lpad.set(nullptr);
+		  other.spad.set(nullptr);
+	  }
 
-	cn_lite_hash& operator= (cn_lite_hash&& other) noexcept
+	  static cn_lite_hash_v0 make_borrowed(cn_lite_hash_v1& t)
+	  {
+		  return cn_lite_hash_v0(t.lpad.as_void(), t.spad.as_void());
+	  }
+
+	  cn_lite_hash& operator=(cn_lite_hash&& other) noexcept
     {
-		if(this == &other)
-			return *this;
+		  if(this == &other)
+			  return *this;
 
-		free_mem();
-		lpad.as_byte = other.lpad.as_byte;
-		spad.as_byte = spad.as_byte;
-		return *this;
-	}
+		  free_mem();
+		  lpad.set(other.lpad.as_void());
+		  spad.set(other.spad.as_void());
+		  borrowed_pad = other.borrowed_pad;
+		  return *this;
+	  }
 
-	// Copying is going to be really inefficient
-	cn_lite_hash(const cn_lite_hash& other) = delete;
-	cn_lite_hash& operator= (const cn_lite_hash& other) = delete;
+	  // Copying is going to be really inefficient
+	  cn_lite_hash(const cn_lite_hash& other) = delete;
+	  cn_lite_hash& operator=(const cn_lite_hash& other) = delete;
 
-	~cn_lite_hash()
-	{
-		free_mem();
-	}
+	  ~cn_lite_hash()
+	  {
+		  free_mem();
+	  }
 
-	void hash(const void* in, size_t len, void* out, bool prehashed=false)
-	{
-		if(hw_check_aes() && !check_override())
-			hardware_hash(in, len, out, prehashed);
-		else
-			software_hash(in, len, out, prehashed);
-	}
+	  void hash(const void* in, size_t len, void* out, bool prehashed=false)
+	  {
+		  if(hw_check_aes() && !check_override())
+			  hardware_hash(in, len, out, prehashed);
+		  else
+			  software_hash(in, len, out, prehashed);
+	  }
 
-	void software_hash(const void* in, size_t len, void* out, bool prehashed);
+	  void software_hash(const void* in, size_t len, void* out, bool prehashed);
 
 #if !defined(HAS_INTEL_HW) && !defined(HAS_ARM_HW)
-	inline void hardware_hash(const void* in, size_t len, void* out, bool prehashed) { assert(false); }
+	  inline void hardware_hash(const void* in, size_t len, void* out, bool prehashed) { assert(false); }
 #else
-	void hardware_hash(const void* in, size_t len, void* out, bool prehashed);
+	  void hardware_hash(const void* in, size_t len, void* out, bool prehashed);
 #endif
 
-private:
-	static constexpr size_t MASK = ((MEMORY-1) >> 4) << 4;
+  private:
+	  static constexpr size_t MASK = ((MEMORY - 1) >> 4) << 4;
+	  friend cn_lite_hash_v0;
+	  friend cn_lite_hash_v1;
 
-	inline bool check_override()
-	{
-		const char *env = getenv("ARQMA_USE_SOFTWARE_AES");
-		if (!env) {
-			return false;
-		}
-		else if (!strcmp(env, "0") || !strcmp(env, "no")) {
-			return false;
-		}
-		else {
-			return true;
-		}
-	}
+	  cn_lite_hash(void* lptr, void* sptr)
+	  {
+		  lpad.set(lptr);
+		  spad.set(sptr);
+		  borrowed_pad = true;
+	  }
 
-	inline void free_mem()
-	{
+	  inline bool check_override()
+	  {
+		  const char *env = getenv("ARQMA_USE_SOFTWARE_AES");
+		  if (!env) {
+			  return false;
+		  }
+		  else if (!strcmp(env, "0") || !strcmp(env, "no")) {
+			  return false;
+		  }
+		  else {
+			  return true;
+		  }
+	  }
+
+	  inline void free_mem()
+	  {
+		  if(!borrowed_pad)
+		  {
 #if !defined(HAS_WIN_INTRIN_API)
-		if(lpad.as_void != nullptr)
-			free(lpad.as_void);
-		if(lpad.as_void != nullptr)
-			free(spad.as_void);
+		    if(lpad.as_void() != nullptr)
+			    free(lpad.as_void());
+		    if(lpad.as_void() != nullptr)
+			    free(spad.as_void());
 #else
-		if(lpad.as_void != nullptr)
-			_aligned_free(lpad.as_void);
-		if(lpad.as_void != nullptr)
-			_aligned_free(spad.as_void);
+		    if(lpad.as_void() != nullptr)
+			    _aligned_free(lpad.as_void());
+		    if(lpad.as_void() != nullptr)
+			    _aligned_free(spad.as_void());
 #endif
-		lpad.as_void = nullptr;
-		spad.as_void = nullptr;
-	}
+      }
 
-	inline cn_sptr scratchpad_ptr(uint32_t idx) { return lpad.as_byte + (idx & MASK); }
+		  lpad.set(nullptr);
+		  spad.set(nullptr);
+	  }
+
+	  inline cn_sptr scratchpad_ptr(uint32_t idx) { return lpad.as_byte() + (idx & MASK); }
 
 #if !defined(HAS_INTEL_HW) && !defined(HAS_ARM_HW)
-	inline void explode_scratchpad_hard() { assert(false); }
-	inline void implode_scratchpad_hard() { assert(false); }
+	  inline void explode_scratchpad_hard() { assert(false); }
+	  inline void implode_scratchpad_hard() { assert(false); }
 #else
-	void explode_scratchpad_hard();
-	void implode_scratchpad_hard();
+	  void explode_scratchpad_hard();
+	  void implode_scratchpad_hard();
 #endif
 
-	void explode_scratchpad_soft();
-	void implode_scratchpad_soft();
+	  void explode_scratchpad_soft();
+	  void implode_scratchpad_soft();
 
-	cn_sptr lpad;
-	cn_sptr spad;
-};
+	  cn_sptr lpad;
+	  cn_sptr spad;
+	  bool borrowed_pad;
+  };
 
-using cn_lite_hash_v1 = cn_lite_hash<1*1024*1024, 0x40000>;
-
-extern template class cn_lite_hash<1*1024*1024, 0x40000>;
+extern template class cn_lite_hash<1*1024*1024, 0x40000, 0>;
+extern template class cn_lite_hash<1*1024*1024, 0x40000, 1>;

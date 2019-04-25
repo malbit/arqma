@@ -91,7 +91,7 @@ if (ARM)
 	   "Compute multiply using generic C implementation instead of ARM ASM" OFF)
   if(NO_OPTIMIZED_MULTIPLY_ON_ARM)
     message(STATUS "Using generic C implementation for multiply")
-    set_property(SOURCE slow-hash.c
+    set_property(SOURCE cn_turtle_hash.c
       PROPERTY COMPILE_DEFINITIONS "NO_OPTIMIZED_MULTIPLY_ON_ARM")
   endif()
 endif()

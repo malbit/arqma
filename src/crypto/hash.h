@@ -37,7 +37,7 @@
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
-#include "crypto/cn_lite/cn_lite_hash.hpp"
+#include "cn_lite/cn_lite_hash.hpp"
 
 namespace crypto {
 
@@ -85,7 +85,10 @@ namespace crypto {
       case cn_slow_hash_type::cn_lite_v1:
       {
         static thread_local cn_lite_hash_v1 v1;
-        v1.hash(data, length, hash.data);
+        static thread_local cn_lite_hash_v0 v0 = cn_lite_hash_v0::make_borrowed(v1);
+
+        if (type == cn_lite_hash_type::cn_lite_v0) v0.hash(data, length, hash.data);
+        else                                       v1.hash(data, length, hash.data);
       }
       break;
 
@@ -95,13 +98,7 @@ namespace crypto {
          const uint32_t CN_TURTLE_PAGE_SIZE = 262144;
          const uint32_t CN_TURTLE_SCRATCHPAD = 262144;
          const uint32_t CN_TURTLE_ITERATIONS = 131072;
-         cn_turtle_hash(data,
-             length,
-             hash.data,
-             1, // light
-             2, // variant
-             0, // pre-hashed
-             CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
+         cn_turtle_hash(data, length, hash.data, 1, 2, 0, CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
       }
       break;
     }
@@ -118,8 +115,8 @@ namespace crypto {
     epee::to_hex::formatted(o, epee::as_byte_span(v)); return o;
   }
 
-  const static crypto::hash null_hash = {}; //boost::value_initialized<crypto::hash>();
-  const static crypto::hash8 null_hash8 = {}; //boost::value_initialized<crypto::hash8>();
+  const static crypto::hash null_hash = {};
+  const static crypto::hash8 null_hash8 = {};
 }
 
 CRYPTO_MAKE_HASHABLE(hash)

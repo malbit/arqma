@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -497,8 +498,7 @@ STATIC INLINE void aes_expand_key(const uint8_t *key, uint8_t *expandedKey)
  * @param nblocks the number of 128 blocks of data to be encrypted
  */
 
-STATIC INLINE void aes_pseudo_round(const uint8_t *in, uint8_t *out,
-                                    const uint8_t *expandedKey, int nblocks)
+STATIC INLINE void aes_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey, int nblocks)
 {
   __m128i *k = R128(expandedKey);
   __m128i d;
@@ -535,8 +535,7 @@ STATIC INLINE void aes_pseudo_round(const uint8_t *in, uint8_t *out,
  * @param nblocks the number of 128 blocks of data to be encrypted
  */
 
-STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out,
-                                        const uint8_t *expandedKey, const uint8_t *xor, int nblocks)
+STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey, const uint8_t *xor, int nblocks)
 {
     __m128i *k = R128(expandedKey);
     __m128i *x = R128(xor);
@@ -692,7 +691,7 @@ void cn_turtle_hash(const void *data, size_t length, char *hash, int light, int 
   uint32_t TOTALBLOCKS = (page_size / AES_BLOCK_SIZE);
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
+  size_t lightFlag = (light ? 2 : 1);
 
   RDATA_ALIGN16 uint8_t expandedKey[240];  /* These buffers are aligned to use later with SSE functions */
 
@@ -878,7 +877,7 @@ union cn_turtle_hash_state
  */
 #include <arm_neon.h>
 
-#define state_index(x,div) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS /(div) - 1)) << 4)
+#define state_index(x,div) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS / (div) - 1)) << 4)
 #define __mul() __asm__("mul %0, %1, %2\n\t" : "=r"(lo) : "r"(c[0]), "r"(b[0]) ); \
   __asm__("umulh %0, %1, %2\n\t" : "=r"(hi) : "r"(c[0]), "r"(b[0]) );
 
@@ -973,7 +972,7 @@ STATIC INLINE void aes_pseudo_round(const uint8_t *in, uint8_t *out, const uint8
 	uint8x16_t tmp;
 	int i;
 
-	for (i=0; i<nblocks; i++)
+	for (i = 0; i < nblocks; i++)
 	{
 		uint8x16_t tmp = vld1q_u8(in + i * AES_BLOCK_SIZE);
 		tmp = vaeseq_u8(tmp, zero);
@@ -1008,7 +1007,7 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
 	uint8x16_t tmp;
 	int i;
 
-	for (i=0; i<nblocks; i++)
+	for (i = 0; i < nblocks; i++)
 	{
 		uint8x16_t tmp = vld1q_u8(in + i * AES_BLOCK_SIZE);
 		tmp = vaeseq_u8(tmp, x[i]);
@@ -1063,7 +1062,7 @@ void cn_turtle_hash(const void *data, size_t length, char *hash, int light, int 
   uint32_t TOTALBLOCKS = (page_size / AES_BLOCK_SIZE);
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
+  size_t lightFlag = (light ? 2 : 1);
 
   RDATA_ALIGN16 uint8_t expandedKey[240];
 
@@ -1283,7 +1282,7 @@ void cn_turtle_hash(const void *data, size_t length, char *hash, int light, int 
 {
   uint32_t init_rounds = (scratchpad / INIT_SIZE_BYTE);
   uint32_t aes_rounds = (iterations / 2);
-  size_t lightFlag = (light ? 2: 1);
+  size_t lightFlag = (light ? 2 : 1);
 
   uint8_t text[INIT_SIZE_BYTE];
   uint8_t a[AES_BLOCK_SIZE];
