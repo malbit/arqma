@@ -87,7 +87,7 @@ namespace crypto {
         static thread_local cn_lite_hash_v1 v1;
         static thread_local cn_lite_hash_v0 v0 = cn_lite_hash_v0::make_borrowed(v1);
 
-        if (type == cn_lite_hash_type::cn_lite_v0) v0.hash(data, length, hash.data);
+        if (type == cn_slow_hash_type::cn_lite_v0) v0.hash(data, length, hash.data);
         else                                       v1.hash(data, length, hash.data);
       }
       break;
