@@ -105,19 +105,6 @@ inline void aes_round8(const __m128i& key, __m128i& x0, __m128i& x1, __m128i& x2
 	x7 = _mm_aesenc_si128(x7, key);
 }
 
-inline void xor_shift(__m128i& x0, __m128i& x1, __m128i& x2, __m128i& x3, __m128i& x4, __m128i& x5, __m128i& x6, __m128i& x7)
-{
-	__m128i tmp0 = x0;
-	x0 = _mm_xor_si128(x0, x1);
-    x1 = _mm_xor_si128(x1, x2);
-    x2 = _mm_xor_si128(x2, x3);
-    x3 = _mm_xor_si128(x3, x4);
-    x4 = _mm_xor_si128(x4, x5);
-    x5 = _mm_xor_si128(x5, x6);
-    x6 = _mm_xor_si128(x6, x7);
-    x7 = _mm_xor_si128(x7, tmp0);
-}
-
 template <size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_lite_hash<MEMORY, ITER, VERSION>::implode_scratchpad_hard()
 {

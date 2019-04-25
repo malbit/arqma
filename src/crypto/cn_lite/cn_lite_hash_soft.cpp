@@ -254,19 +254,6 @@ inline void aes_round8(const aesdata& key, aesdata& x0, aesdata& x1, aesdata& x2
 	aes_round(x7, key);
 }
 
-inline xor_shift(aesdata& x0, aesdata& x1, aesdata& x2, aesdata& x3, aesdata& x4, aesdata& x5, aesdata& x6, aesdata& x7)
-{
-	aesdata tmp = x0;
-	x0 ^= x1;
-	x1 ^= x2;
-	x2 ^= x3;
-	x3 ^= x4;
-	x4 ^= x5;
-	x5 ^= x6;
-	x6 ^= x7;
-	x7 ^= tmp;
-}
-
 template <size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_lite_hash<MEMORY, ITER, VERSION>::implode_scratchpad_soft()
 {
@@ -465,7 +452,7 @@ void cn_lite_hash<MEMORY, ITER, VERSION>::software_hash(const void* in, size_t l
 
 	keccakf(spad.as_uqword(), 24);
 
-	switch(spad.as_byte[(0) & 3)
+	switch(spad.as_byte(0) & 3)
 	{
 	case 0:
 		blake256_hash((uint8_t*)out, spad.as_byte(), 200);
