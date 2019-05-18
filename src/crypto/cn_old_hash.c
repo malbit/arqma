@@ -51,7 +51,7 @@ extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *ex
 extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
 #define VARIANT1_1(p) \
-do if (variant > 0) \
+do if (variant == 1) \
 { \
   const uint8_t tmp = ((const uint8_t*)(p))[11]; \
   static const uint32_t table = 0x75310; \
@@ -60,7 +60,7 @@ do if (variant > 0) \
 } while(0)
 
 #define VARIANT1_2(p) \
-  do if (variant > 0) \
+  do if (variant == 1) \
   { \
     xor64(p, tweak1_2); \
   } while(0)
@@ -76,7 +76,7 @@ do if (variant > 0) \
 
 #define VARIANT1_PORTABLE_INIT() \
   uint8_t tweak1_2[8]; \
-  do if (variant > 0) \
+  do if (variant == 1) \
   { \
     VARIANT1_CHECK(); \
     memcpy(&tweak1_2, &state.hs.b[192], sizeof(tweak1_2)); \
@@ -84,11 +84,11 @@ do if (variant > 0) \
   } while(0)
 
 #define VARIANT1_INIT64() \
-  if (variant > 0) \
+  if (variant == 1) \
   { \
     VARIANT1_CHECK(); \
   } \
-  const uint64_t tweak1_2 = variant > 0 ? (state.hs.w[24] ^ (*((const uint64_t*)NONCE_POINTER))) : 0
+  const uint64_t tweak1_2 = (variant == 1) ? (state.hs.w[24] ^ (*((const uint64_t*)NONCE_POINTER))) : 0
 
 #if !defined NO_AES && (defined(__x86_64__) || (defined(_MSC_VER) && defined(_WIN64)))
 // Optimised code below, uses x86-specific intrinsics, SSE2, AES-NI
@@ -152,7 +152,7 @@ do if (variant > 0) \
 
 #define pre_aes() \
   j = state_index(a); \
-  _c = _mm_load_si128(R128(&hp_state[j])); \
+  _c = _mm_load_si128(R128(&old_hp_state[j])); \
   _a = _mm_load_si128(R128(a)); \
 
 /*
@@ -167,14 +167,14 @@ do if (variant > 0) \
 #define post_aes() \
   _mm_store_si128(R128(c), _c); \
   _b = _mm_xor_si128(_b, _c); \
-  _mm_store_si128(R128(&hp_state[j]), _b); \
-  VARIANT1_1(&hp_state[j]); \
+  _mm_store_si128(R128(&old_hp_state[j]), _b); \
+  VARIANT1_1(&old_hp_state[j]); \
   j = state_index(c); \
-  p = U64(&hp_state[j]); \
+  p = U64(&old_hp_state[j]); \
   b[0] = p[0]; b[1] = p[1]; \
   __mul(); \
   a[0] += hi; a[1] += lo; \
-  p = U64(&hp_state[j]); \
+  p = U64(&old_hp_state[j]); \
   p[0] = a[0];  p[1] = a[1]; \
   a[0] ^= b[0]; a[1] ^= b[1]; \
   VARIANT1_2(p + 1); \
@@ -198,13 +198,13 @@ union cn_old_hash_state
 };
 #pragma pack(pop)
 
-THREADV uint8_t *hp_state = NULL;
-THREADV int hp_allocated = 0;
+THREADV uint8_t *old_hp_state = NULL;
+THREADV int old_hp_allocated = 0;
 
 #if defined(_MSC_VER)
-#define cpuid(info,x)    __cpuidex(info,x,0)
+#define cpuid_old(info,x)    __cpuidex_p;d(info,x,0)
 #else
-void cpuid(int CPUInfo[4], int InfoType)
+void cpuid_old(int CPUInfo[4], int InfoType)
 {
     ASM __volatile__
     (
@@ -266,7 +266,7 @@ STATIC INLINE int check_aes_hw(void)
     if(supported >= 0)
         return supported;
 
-    cpuid(cpuid_results,1);
+    cpuid_old(cpuid_results,1);
     return supported = cpuid_results[2] & (1 << 25);
 }
 
@@ -478,36 +478,36 @@ BOOL SetLockPagesPrivilege(HANDLE hProcess, BOOL bEnable)
  * during the random accesses to the scratch buffer.  This is one of the
  * important speed optimizations needed to make CryptoNight faster.
  *
- * No parameters.  Updates a thread-local pointer, hp_state, to point to
+ * No parameters.  Updates a thread-local pointer, old_hp_state, to point to
  * the allocated buffer.
  */
 
 void old_hash_allocate_state(void)
 {
-    if(hp_state != NULL)
+    if(old_hp_state != NULL)
         return;
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
     SetLockPagesPrivilege(GetCurrentProcess(), TRUE);
-    hp_state = (uint8_t *) VirtualAlloc(hp_state, MEMORY, MEM_LARGE_PAGES |
+    old_hp_state = (uint8_t *) VirtualAlloc(old_hp_state, MEMORY, MEM_LARGE_PAGES |
                                         MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
   defined(__DragonFly__)
-    hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE,
+    old_hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANON, 0, 0);
 #else
-    hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE,
+    old_hp_state = mmap(0, MEMORY, PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
 #endif
-    if(hp_state == MAP_FAILED)
-        hp_state = NULL;
+    if(old_hp_state == MAP_FAILED)
+        old_hp_state = NULL;
 #endif
-    hp_allocated = 1;
-    if(hp_state == NULL)
+    old_hp_allocated = 1;
+    if(old_hp_state == NULL)
     {
-        hp_allocated = 0;
-        hp_state = (uint8_t *) malloc(MEMORY);
+        old_hp_allocated = 0;
+        old_hp_state = (uint8_t *) malloc(MEMORY);
     }
 }
 
@@ -517,22 +517,22 @@ void old_hash_allocate_state(void)
 
 void old_hash_free_state(void)
 {
-    if(hp_state == NULL)
+    if(old_hp_state == NULL)
         return;
 
-    if(!hp_allocated)
-        free(hp_state);
+    if(!old_hp_allocated)
+        free(old_hp_state);
     else
     {
 #if defined(_MSC_VER) || defined(__MINGW32__)
-        VirtualFree(hp_state, 0, MEM_RELEASE);
+        VirtualFree(old_hp_state, 0, MEM_RELEASE);
 #else
-        munmap(hp_state, MEMORY);
+        munmap(old_hp_state, MEMORY);
 #endif
     }
 
-    hp_state = NULL;
-    hp_allocated = 0;
+    old_hp_state = NULL;
+    old_hp_allocated = 0;
 }
 
 /**
@@ -588,7 +588,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
     };
 
     // this isn't supposed to happen, but guard against it for now.
-    if(hp_state == NULL)
+    if(old_hp_state == NULL)
         old_hash_allocate_state();
 
     /* CryptoNight Step 1:  Use Keccak1600 to initialize the 'state' (and 'text') buffers from the data. */
@@ -611,7 +611,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
         for(i = 0; i < MEMORY / INIT_SIZE_BYTE; i++)
         {
             aes_pseudo_round(text, text, expandedKey, INIT_SIZE_BLK);
-            memcpy(&hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
+            memcpy(&old_hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
         }
     }
     else
@@ -623,7 +623,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
             for(j = 0; j < INIT_SIZE_BLK; j++)
                 aesb_pseudo_round(&text[AES_BLOCK_SIZE * j], &text[AES_BLOCK_SIZE * j], aes_ctx->key->exp_data);
 
-            memcpy(&hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
+            memcpy(&old_hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
         }
     }
 
@@ -670,7 +670,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
         for(i = 0; i < MEMORY / INIT_SIZE_BYTE; i++)
         {
             // add the xor to the pseudo round
-            aes_pseudo_round_xor(text, text, expandedKey, &hp_state[i * INIT_SIZE_BYTE], INIT_SIZE_BLK);
+            aes_pseudo_round_xor(text, text, expandedKey, &old_hp_state[i * INIT_SIZE_BYTE], INIT_SIZE_BLK);
         }
     }
     else
@@ -680,7 +680,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
         {
             for(j = 0; j < INIT_SIZE_BLK; j++)
             {
-                xor_blocks(&text[j * AES_BLOCK_SIZE], &hp_state[i * INIT_SIZE_BYTE + j * AES_BLOCK_SIZE]);
+                xor_blocks(&text[j * AES_BLOCK_SIZE], &old_hp_state[i * INIT_SIZE_BYTE + j * AES_BLOCK_SIZE]);
                 aesb_pseudo_round(&text[AES_BLOCK_SIZE * j], &text[AES_BLOCK_SIZE * j], aes_ctx->key->exp_data);
             }
         }
@@ -758,20 +758,20 @@ union cn_old_hash_state
 
 #define pre_aes() \
   j = state_index(a); \
-  _c = vld1q_u8(&hp_state[j]); \
+  _c = vld1q_u8(&old_hp_state[j]); \
   _a = vld1q_u8((const uint8_t *)a); \
 
 #define post_aes() \
   vst1q_u8((uint8_t *)c, _c); \
   _b = veorq_u8(_b, _c); \
-  vst1q_u8(&hp_state[j], _b); \
-  VARIANT1_1(&hp_state[j]); \
+  vst1q_u8(&old_hp_state[j], _b); \
+  VARIANT1_1(&old_hp_state[j]); \
   j = state_index(c); \
-  p = U64(&hp_state[j]); \
+  p = U64(&old_hp_state[j]); \
   b[0] = p[0]; b[1] = p[1]; \
   __mul(); \
   a[0] += hi; a[1] += lo; \
-  p = U64(&hp_state[j]); \
+  p = U64(&old_hp_state[j]); \
   p[0] = a[0];  p[1] = a[1]; \
   a[0] ^= b[0]; a[1] ^= b[1]; \
   VARIANT1_2(p + 1); \
@@ -932,9 +932,9 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
     RDATA_ALIGN16 uint8_t expandedKey[240];
 
 #ifndef FORCE_USE_HEAP
-    RDATA_ALIGN16 uint8_t hp_state[MEMORY];
+    RDATA_ALIGN16 uint8_t old_hp_state[MEMORY];
 #else
-    uint8_t *hp_state = (uint8_t *)aligned_malloc(MEMORY,16);
+    uint8_t *old_hp_state = (uint8_t *)aligned_malloc(MEMORY,16);
 #endif
 
     uint8_t text[INIT_SIZE_BYTE];
@@ -972,7 +972,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
     for(i = 0; i < MEMORY / INIT_SIZE_BYTE; i++)
     {
         aes_pseudo_round(text, text, expandedKey, INIT_SIZE_BLK);
-        memcpy(&hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
+        memcpy(&old_hp_state[i * INIT_SIZE_BYTE], text, INIT_SIZE_BYTE);
     }
 
     U64(a)[0] = U64(&state.k[0])[0] ^ U64(&state.k[32])[0];
@@ -1007,7 +1007,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
     for(i = 0; i < MEMORY / INIT_SIZE_BYTE; i++)
     {
         // add the xor to the pseudo round
-        aes_pseudo_round_xor(text, text, expandedKey, &hp_state[i * INIT_SIZE_BYTE], INIT_SIZE_BLK);
+        aes_pseudo_round_xor(text, text, expandedKey, &old_hp_state[i * INIT_SIZE_BYTE], INIT_SIZE_BLK);
     }
 
     /* CryptoNight Step 5:  Apply Keccak to the state again, and then
@@ -1022,7 +1022,7 @@ void cn_old_hash(const void *data, size_t length, char *hash, int variant, int p
     extra_hashes[state.hs.b[0] & 3](&state, 200, hash);
 
 #ifdef FORCE_USE_HEAP
-    aligned_free(hp_state);
+    aligned_free(old_hp_state);
 #endif
 }
 #else /* aarch64 && crypto */
