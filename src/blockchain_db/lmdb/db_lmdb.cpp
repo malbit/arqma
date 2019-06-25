@@ -267,7 +267,7 @@ inline void lmdb_db_open(MDB_txn* txn, const char* name, int flags, MDB_dbi& dbi
 namespace cryptonote
 {
 
-  typedef struct mdb_block_info_old
+  typedef struct mdb_block_info_1
   {
     uint64_t bi_height;
     uint64_t bi_timestamp;
@@ -275,9 +275,9 @@ namespace cryptonote
     uint64_t bi_size; // a size_t really but we need 32-bit compat
     difficulty_type bi_diff;
     crypto::hash bi_hash;
-  } mdb_block_info_old;
+  } mdb_block_info_1;
 
-typedef struct mdb_block_info
+typedef struct mdb_block_info_2
 {
   uint64_t bi_height;
   uint64_t bi_timestamp;
@@ -286,7 +286,9 @@ typedef struct mdb_block_info
   difficulty_type bi_diff;
   crypto::hash bi_hash;
   uint64_t bi_cum_rct;
-} mdb_block_info;
+} mdb_block_info_2;
+
+typedef mdb_block_info_2 mdb_block_info;
 
 typedef struct blk_height {
     crypto::hash bh_hash;
@@ -4089,7 +4091,7 @@ void BlockchainLMDB::migrate_0_1()
       break;
     }
     MDB_dbi diffs, hashes, sizes, timestamps;
-    mdb_block_info_old bi;
+    mdb_block_info_1 bi;
     MDB_val_set(nv, bi);
 
     lmdb_db_open(txn, "block_diffs", 0, diffs, "Failed to open db handle for block_diffs");
@@ -4716,8 +4718,8 @@ void BlockchainLMDB::migrate_2_3()
       }
       else if (result)
         throw0(DB_ERROR(lmdb_error("Failed to get a record from block_info: ", result).c_str()));
-      const mdb_block_info_old *bi_old = (const mdb_block_info_old*)v.mv_data;
-      mdb_block_info bi;
+      const mdb_block_info_1 *bi_old = (const mdb_block_info_1*)v.mv_data;
+      mdb_block_info_2 bi;
       bi.bi_height = bi_old->bi_height;
       bi.bi_timestamp = bi_old->bi_timestamp;
       bi.bi_coins = bi_old->bi_coins;
@@ -4773,16 +4775,13 @@ void BlockchainLMDB::migrate_2_3()
 
 void BlockchainLMDB::migrate(const uint32_t oldversion)
 {
-  switch(oldversion) {
-  case 0:
-    migrate_0_1(); /* FALLTHRU */
-  case 1:
-    migrate_1_2(); /* FALLTHRU */
-  case 2:
-    migrate_2_3(); /* FALLTHRU */
-  default:
-    ;
-  }
+  if (oldversion < 1)
+    migrate_0_1();
+  if (oldversion < 2)
+    migrate_1_2();
+  if (oldversion < 3)
+    migrate_2_3();
 }
+
 
 }  // namespace cryptonote
