@@ -912,7 +912,7 @@ namespace cryptonote
      * @param offsets the indices (indexed to the amount) of the outputs
      * @param outputs return-by-reference the outputs collected
      */
-    void output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs) const;
+    void output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, const std::vector<output_data_t> &extra_tx_map) const;
 
     /**
      * @brief computes the "short" and "long" hashes for a set of blocks
@@ -921,7 +921,7 @@ namespace cryptonote
      * @param blocks the blocks to be hashed
      * @param map return-by-reference the hashes for each block
      */
-    void block_longhash_worker(uint64_t height, const std::vector<block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const;
+    void block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const;
 
     /**
      * @brief returns a set of known alternate chains
@@ -966,7 +966,9 @@ namespace cryptonote
      */
     void pop_blocks(uint64_t nblocks);
 
+#ifndef IN_UNIT_TESTS
   private:
+#endif
 
     // TODO: evaluate whether or not each of these typedefs are left over from blockchain_storage
     typedef std::unordered_map<crypto::hash, size_t> blocks_by_id_index;

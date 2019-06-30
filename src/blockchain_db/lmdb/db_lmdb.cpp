@@ -2550,12 +2550,13 @@ crypto::hash BlockchainLMDB::top_block_hash() const
   return null_hash;
 }
 
-block BlockchainLMDB::get_top_block() const
+block BlockchainLMDB::get_top_block(uint64_t *block_height) const
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
   uint64_t m_height = height();
-
+  if (block_height)
+    *block_height = m_height - 1;
   if (m_height != 0)
   {
     return get_block_from_height(m_height - 1);
