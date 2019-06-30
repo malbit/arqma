@@ -435,12 +435,12 @@ namespace
     catch (const tools::error::not_enough_outs_to_mix& e)
     {
       auto writer = fail_msg_writer();
-      writer << sw::tr("not enough outputs for specified ring size") << " = " << (e.mixin_count() + 1) << ":";
+      writer << sw::tr("not enough outputs for specified ring size") << " = " << (e.mixin_count() + 1);
       for (std::pair<uint64_t, uint64_t> outs_for_amount : e.scanty_outs())
       {
         writer << "\n" << sw::tr("output amount") << " = " << print_money(outs_for_amount.first) << ", " << sw::tr("found outputs to use") << " = " << outs_for_amount.second;
       }
-      writer << sw::tr("Please use sweep_unmixable.");
+      writer << "\n\n" sw::tr("Please use sweep_unmixable.");
     }
     catch (const tools::error::tx_not_constructed&)
       {
@@ -826,7 +826,7 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
       std::string msg;
       if (priority == m_wallet->get_default_priority() || (m_wallet->get_default_priority() == 0 && priority == 2))
         msg = tr(" (current)");
-      uint64_t minutes_low = nblocks_low * DIFFICULTY_TARGET_V2 / 60, minutes_high = nblocks_high * DIFFICULTY_TARGET_V11 / 60;
+      uint64_t minutes_low = nblocks_low * DIFFICULTY_TARGET_V11 / 60, minutes_high = nblocks_high * DIFFICULTY_TARGET_V11 / 60;
       if (nblocks_high == nblocks_low)
         message_writer() << (boost::format(tr("%u block (%u minutes) backlog at priority %u%s")) % nblocks_low % minutes_low % priority % msg).str();
       else
@@ -1816,7 +1816,7 @@ bool simple_wallet::set_default_ring_size(const std::vector<std::string> &args/*
     }
 
     if (ring_size != 0 && ring_size != DEFAULT_MIX+1)
-      message_writer() << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
+      fail_msg_writer() << "\n" << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
 
     const auto pwd_container = get_and_verify_password();
     if (pwd_container)
@@ -4652,7 +4652,7 @@ bool simple_wallet::print_ring_members(const std::vector<tools::wallet2::pending
     if (are_keys_from_same_tx || are_keys_from_close_height)
     {
       ostr
-        << tr("\nWarning: Some input keys being spent are from ")
+        << tr("\n\nWarning: Some input keys being spent are from ")
         << (are_keys_from_same_tx ? tr("the same transaction") : tr("blocks that are temporally very close"))
         << tr(", which can break the anonymity of ring signature. Make sure this is intentional!");
     }

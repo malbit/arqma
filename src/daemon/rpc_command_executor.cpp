@@ -1744,11 +1744,14 @@ bool t_rpc_command_executor::print_blockchain_dynamic_stats(uint64_t nblocks)
   cryptonote::COMMAND_RPC_GET_BLOCK_HEADERS_RANGE::response bhres;
   cryptonote::COMMAND_RPC_GET_PER_KB_FEE_ESTIMATE::request fereq;
   cryptonote::COMMAND_RPC_GET_PER_KB_FEE_ESTIMATE::response feres;
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::request hfreq;
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hfres;
   epee::json_rpc::error error_resp;
 
   std::string fail_message = "Problem fetching info";
 
   fereq.grace_blocks = 0;
+  hfreq.version = HF_FORBID_BORROMEAN;
   if (m_is_rpc)
   {
     if (!m_rpc_client->rpc_request(ireq, ires, "/getinfo", fail_message.c_str()))
@@ -1756,6 +1759,10 @@ bool t_rpc_command_executor::print_blockchain_dynamic_stats(uint64_t nblocks)
       return true;
     }
     if (!m_rpc_client->json_rpc_request(fereq, feres, "get_fee_estimate", fail_message.c_str()))
+    {
+      return true;
+    }
+    if (!m_rpc_client->json_rpc_request(hfreq, hfres, "hard_fork_info", fail_message.c_str()))
     {
       return true;
     }
@@ -1770,6 +1777,11 @@ bool t_rpc_command_executor::print_blockchain_dynamic_stats(uint64_t nblocks)
     if (!m_rpc_server->on_get_per_kb_fee_estimate(fereq, feres, error_resp) || feres.status != CORE_RPC_STATUS_OK)
     {
       tools::fail_msg_writer() << make_error(fail_message, feres.status);
+      return true;
+    }
+    if (!m_rpc_server->on_hard_fork_info(hfreq, hfres, error_resp) || hfres.status != CORE_RPC_STATUS_OK)
+    {
+      tools::fail_msg_writer() << make_error(fail_message, hfres.status);
       return true;
     }
   }

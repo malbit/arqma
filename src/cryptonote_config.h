@@ -165,6 +165,7 @@
 #define HF_VERSION_MIN_MIXIN_6                          7
 #define HF_VERSION_ENFORCE_RCT                          6
 #define HF_VERSION_LOWER_FEE                            10
+#define HF_FORBID_BORROMEAN                             13
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
@@ -186,7 +187,6 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 // New constants are intended to go here
 namespace config
 {
-   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
    uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
    uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);

@@ -130,13 +130,16 @@ static const struct {
  { 10, 30, 0, 1538352000 },
  { 11, 40, 0, 1552424400 },
  { 12, 50, 0, 1552824400 },
+ { 13, 10100, 0, 1560348000 },
+ { 14, 10820, 0, 1560351600 },
 };
 static const uint64_t stagenet_hard_fork_version_1_till = 1;
 
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_sz_limit(0), m_current_block_cumul_sz_median(0),
-  m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false), m_fast_sync(true), m_show_time_stats(true), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
+  m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
+  m_fast_sync(true), m_show_time_stats(true), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
   m_difficulty_for_next_block(1),
   m_btc_valid(false)
@@ -1912,9 +1915,9 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   {
     switch (m_nettype)
     {
-      case STAGENET: start_height = stagenet_hard_forks[7].height; break;
-      case TESTNET: start_height = testnet_hard_forks[7].height; break;
-      case MAINNET: start_height = mainnet_hard_forks[7].height; break;
+      case STAGENET: start_height = stagenet_hard_forks[3].height; break;
+      case TESTNET: start_height = testnet_hard_forks[3].height; break;
+      case MAINNET: start_height = mainnet_hard_forks[3].height; break;
       default: return false;
     }
   }
@@ -2549,6 +2552,31 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
+  if (hf_version < HF_FORBID_BORROMEAN && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
+    if (tx.version >= 2) {
+      const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
+      if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
+      {
+        MERROR_VER("Bulletproofs Padded are not allowed before v13");
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
+  // from v14, forbid borromean range proofs <--- Need to be speak about
+  if (hf_version > HF_FORBID_BORROMEAN) {
+    if (tx.version >= 2) {
+      const bool borromean = rct::is_rct_borromean(tx.rct_signatures.type);
+      if (borromean)
+      {
+        MERROR_VER("Borromean range proofs are not allowed after v13");
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 //------------------------------------------------------------------
@@ -2574,7 +2602,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
   rv.message = rct::hash2rct(tx_prefix_hash);
 
   // mixRing - full and simple store it in opposite ways
-  if (rv.type == rct::RCTTypeFull)
+  if (rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys[0].size());
@@ -2589,7 +2617,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
       }
     }
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys.size());
@@ -2608,14 +2636,14 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
   }
 
   // II
-  if (rv.type == rct::RCTTypeFull)
+  if (rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
   {
     rv.p.MGs.resize(1);
     rv.p.MGs[0].II.resize(tx.vin.size());
     for (size_t n = 0; n < tx.vin.size(); ++n)
       rv.p.MGs[0].II[n] = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
   {
     CHECK_AND_ASSERT_MES(rv.p.MGs.size() == tx.vin.size(), false, "Bad MGs size");
     for (size_t n = 0; n < tx.vin.size(); ++n)
@@ -2881,6 +2909,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       return false;
     }
     case rct::RCTTypeSimple:
+    case rct::RCTTypeSimpleBulletproof:
     case rct::RCTTypeBulletproof:
     {
       // check all this, either reconstructed (so should really pass), or not
@@ -2939,6 +2968,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       break;
     }
     case rct::RCTTypeFull:
+    case rct::RCTTypeFullBulletproof:
     {
       // check all this, either reconstructed (so should really pass), or not
       {
@@ -3002,10 +3032,10 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       return false;
     }
 
-    // for bulletproofs, check they're only multi-output after v8
+    // for bulletproofs, check they're only multi-output after v13
     if (rct::is_rct_bulletproof(rv.type))
     {
-      if (hf_version < 13)
+      if (hf_version < HF_FORBID_BORROMEAN)
       {
         for (const rct::Bulletproof &proof: rv.p.bulletproofs)
         {

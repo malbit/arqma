@@ -1362,9 +1362,11 @@ static uint64_t decodeRct(const rct::rctSig & rv, const crypto::key_derivation &
     switch (rv.type)
     {
     case rct::RCTTypeSimple:
+    case rct::RCTTypeSimpleBulletproof:
     case rct::RCTTypeBulletproof:
       return rct::decodeRctSimple(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     case rct::RCTTypeFull:
+    case rct::RCTTypeFullBulletproof:
       return rct::decodeRct(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     default:
       LOG_ERROR("Unsupported rct type: " << rv.type);
@@ -5469,9 +5471,14 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pendin
     signed_txes.ptx.push_back(pending_tx());
     tools::wallet2::pending_tx &ptx = signed_txes.ptx.back();
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
-    if (sd.use_bulletproofs)
+    const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+    if(sd.use_bulletproofs && bulletproofv2)
     {
       range_proof_type = rct::RangeProofPaddedBulletproof;
+    }
+    else if(sd.use_bulletproofs)
+    {
+     range_proof_type = rct::RangeProofMultiOutputBulletproof;
     }
     crypto::secret_key tx_key;
     std::vector<crypto::secret_key> additional_tx_keys;
@@ -5894,9 +5901,17 @@ bool wallet2::sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto
     rct::multisig_out msout = ptx.multisig_sigs.front().msout;
     auto sources = sd.sources;
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
-    if (sd.use_bulletproofs)
+    if(sd.use_bulletproofs)
     {
-      range_proof_type = rct::RangeProofBulletproof;
+      const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+      if(bulletproofv2)
+      {
+        range_proof_type = rct::RangeProofPaddedBulletproof;
+      }
+      else
+      {
+        range_proof_type = rct::RangeProofMultiOutputBulletproof;
+      }
       for (const rct::Bulletproof &proof: ptx.tx.rct_signatures.p.bulletproofs)
         if (proof.V.size() > 1)
           range_proof_type = rct::RangeProofPaddedBulletproof;
@@ -6118,7 +6133,7 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       const uint64_t full_reward_zone = block_size_limit / 2;
 
       // get the last N block headers and sum the block sizes
-      const size_t N = 15;
+      const size_t N = 10;
       if (m_blockchain.size() < N)
       {
         MERROR("The blockchain is too short");
@@ -6553,7 +6568,8 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         has_rct = true;
         max_rct_index = std::max(max_rct_index, m_transfers[idx].m_global_output_index);
       }
-    const bool has_rct_distribution = has_rct && get_rct_distribution(rct_start_height, rct_offsets);
+    bool has_rct_distribution = has_rct && get_rct_distribution(rct_start_height, rct_offsets);
+    if (rct_offsets.size() == 0) has_rct_distribution = false;
     if (has_rct_distribution)
     {
       // check we're clear enough of rct start, to avoid corner cases below
@@ -6651,7 +6667,10 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     //static const double shape = m_testnet ? 17.02 : 17.28;
     static const double scale = 1/1.61;
     std::gamma_distribution<double> gamma(shape, scale);
-    THROW_WALLET_EXCEPTION_IF(rct_offsets.size() <= CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE, error::wallet_internal_error, "Bad offset calculation");
+
+    if(has_rct_distribution) {
+      THROW_WALLET_EXCEPTION_IF(rct_offsets.size() <= CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE, error::wallet_internal_error, "Bad offset calculation");
+    }
     uint64_t last_usable_block = rct_offsets.size() - 1;
     auto pick_gamma = [&]()
     {
@@ -8210,7 +8229,8 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   uint64_t upper_transaction_size_limit = get_upper_transaction_size_limit();
   const bool use_rct = use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const rct::RangeProofType range_proof_type = bulletproof ? rct::RangeProofPaddedBulletproof : rct::RangeProofBorromean;
+  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
 
   const uint64_t fee_per_kb  = get_per_kb_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
@@ -8783,7 +8803,8 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
 
   const bool use_rct = fake_outs_count > 0 && use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const rct::RangeProofType range_proof_type = bulletproof ? rct::RangeProofPaddedBulletproof : rct::RangeProofBorromean;
+  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
   const uint64_t fee_per_kb  = get_per_kb_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
 
@@ -11477,7 +11498,7 @@ std::vector<std::pair<uint64_t, uint64_t>> wallet2::estimate_backlog(const std::
     uint64_t nblocks_min = priority_size_min / full_reward_zone;
     uint64_t nblocks_max = priority_size_max / full_reward_zone;
     MDEBUG("estimate_backlog: priority_size " << priority_size_min << " - " << priority_size_max << " for "
-        << our_fee_byte_min << " - " << our_fee_byte_max << " piconero byte fee, "
+        << our_fee_byte_min << " - " << our_fee_byte_max << " nanoarq byte fee, "
         << nblocks_min << " - " << nblocks_max << " blocks at block size " << full_reward_zone);
     blocks.push_back(std::make_pair(nblocks_min, nblocks_max));
   }
@@ -11515,7 +11536,7 @@ uint64_t wallet2::get_segregation_fork_height() const
   static const bool use_dns = true;
   if (use_dns)
   {
-    // All four MoneroPulse domains have DNSSEC on and valid
+    // All four Arq-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
 
     };
