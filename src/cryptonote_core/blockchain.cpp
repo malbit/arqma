@@ -2542,12 +2542,14 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
   }
 
   if (hf_version < 8) {
-    const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
-    if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
-    {
-      MERROR("Bulletproofs are not allowed before v8");
-      tvc.m_invalid_output = true;
-      return false;
+    if (tx.version >= 2) {
+      const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
+      if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
+      {
+        MERROR("Bulletproofs are not allowed before v8");
+        tvc.m_invalid_output = true;
+        return false;
+      }
     }
   }
 
