@@ -607,6 +607,8 @@ rapidjson::Value SetLogLevel::Request::toJson(rapidjson::Document& doc) const
 {
   auto val = Message::toJson(doc);
 
+  auto& al = doc.GetAllocator();
+
   val.AddMember("level", level, al);
 
   return val;
