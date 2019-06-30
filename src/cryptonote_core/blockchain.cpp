@@ -4268,7 +4268,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       }
     }
 
-    for(unsigned i = 0; i < extra && !blocks_exist; i++, blockidx++++)
+    for(unsigned i = 0; i < extra && !blocks_exist; i++, blockidx++)
     {
       block &block = blocks[blockidx];
 
@@ -4289,7 +4289,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       m_blocks_longhash_table.clear();
       uint64_t thread_height = height;
       tools::threadpool::waiter waiter;
-      for (unsugned int i = 0; i < threads; i++)
+      for (unsigned int i = 0; i < threads; i++)
       {
         unsigned nblocks = batches;
         if (i < extra)
