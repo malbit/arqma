@@ -234,7 +234,6 @@ namespace config
 
    namespace blockchain_settings
    {
-     static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
      static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
@@ -254,6 +253,23 @@ namespace config
    {
      static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
      static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Arqma Daemon and Checkpoint are hardcoded into codebase
+   }
+   
+   namespace devFund
+   {
+     // For test purpouses I did add Arqma Donation Wallet Address. It has to be changed later.
+     static constexpr const char* DEV_FUND_WALLET = "as1uZ1q6ZZHLnocX8taDcY3MiamFb2PGc48U3yN6beoNazh2TMRrYgZF31t6MxDSUgC2TYSTMS1A28e44NPDwWLt2EE4ZGbck"; // <-- stagenet "ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3";
+     // viewkey: 4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62
+     static constexpr const char* DEV_FUND_WALLET_VIEWKEY = "\x30\xec\xa9\x31\xe8\xbf\x46\xa9\xd7\x7c\x15\x4c\xf7\x31\x48\xd0\x3b\x53\x5d\xc4\x3a\x9a\x89\x66\x13\xd3\xf7\xa4\x05\x61\x3e\x05"; // <-- stagenet
+     // "\x4e\x53\x73\xdf\xd5\xba\x67\xfa\x29\x88\x10\x7a\x60\x5b\xc9\x60\x57\x5c\x46\x5b\xd0\x7a\xba\x62\x49\x15\xd3\xf6\x60\xb7\x3d\x62";
+     // 5,100,000 ARQ has been burned. Value is set in atomic units.
+     static constexpr uint64_t PREMINE_BURN = 5100000000000000;
+     
+     // Dev-Fund constants
+     static constexpr uint64_t FUND_PERIOD = 30 * 24; // for test purpouses on stagenet <- 1 day * 7; // Funds will be released every week.
+     static constexpr uint64_t FUND_AMOUNT = 10000000000000; // Amount which will be released in ARQ atomic units (10k ARQ).
+     static constexpr uint64_t FUND_LENGTH = 52 * 8; // How long funding will act (8 years).
+     static constexpr uint64_t FUND_START  = 7500; // stagenet test 240000; // Blockchain Height that Funding will start from.
    }
 }
 

@@ -44,6 +44,7 @@ using namespace epee;
 #include "warnings.h"
 #include "crypto/crypto.h"
 #include "cryptonote_config.h"
+#include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "misc_language.h"
 #include "file_io_utils.h"
 #include <csignal>
@@ -1172,7 +1173,7 @@ namespace cryptonote
     }
 
     // Remove Burned Premine Amount from coinbase emission
-    emission_amount -= config::blockchain_settings::PREMINE_BURN;
+    emission_amount -= (config::devFund::PREMINE_BURN + get_dev_fund_cumulative(height));
 
     return std::pair<uint64_t, uint64_t>(emission_amount, total_fee_amount);
   }

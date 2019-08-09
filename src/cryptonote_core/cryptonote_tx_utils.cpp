@@ -89,9 +89,6 @@ namespace cryptonote
     if (!sort_tx_extra(tx.extra, tx.extra))
       return false;
 
-    txin_gen in;
-    in.height = height;
-
     uint64_t block_reward;
 	if (height == 1) {
 		block_reward = MONEY_PREMINE;
@@ -107,67 +104,41 @@ namespace cryptonote
 #endif
     block_reward += fee;
 
-/*    // from hard fork 2, we cut out the low significant digits. This makes the tx smaller, and
-    // keeps the paid amount almost the same. The unpaid remainder gets pushed back to the
-    // emission schedule
-    // from hard fork 4, we use a single "dusty" output. This makes the tx even smaller,
-    // and avoids the quantization. These outputs will be added as rct outputs with identity
-    // masks, to they can be used as rct inputs.
-    if (hard_fork_version >= 2 && hard_fork_version < 4) {
-      block_reward = block_reward - block_reward % ::config::BASE_REWARD_CLAMP_THRESHOLD;
-    } */
+    // Create miner's output
+    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
+    crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+    bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
+    CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << ", " << txkey.sec << ")");
+    
+    r = crypto::derive_public_key(derivation, 0, miner_address.m_spend_public_key, out_eph_public_key);
+    CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", 0, " << miner_address.m_spend_public_key << ")");
 
-    std::vector<uint64_t> out_amounts;
-    decompose_amount_into_digits(block_reward, hard_fork_version >= 2 ? 0 : ::config::DEFAULT_DUST_THRESHOLD,
-      [&out_amounts](uint64_t a_chunk) { out_amounts.push_back(a_chunk); },
-      [&out_amounts](uint64_t a_dust) { out_amounts.push_back(a_dust); });
-
-    CHECK_AND_ASSERT_MES(1 <= max_outs, false, "max_out must be non-zero");
-    if (height == 0 || hard_fork_version >= 4)
+    tx_out out = { block_reward, txout_to_key(out_eph_public_key) };
+    tx.vout.push_back(out);
+    
+    uint64_t dev_fund_amount;
+    if(get_dev_fund_amount(height, dev_fund_amount))
     {
-      // the genesis block was not decomposed, for unknown reasons
-      while (max_outs < out_amounts.size())
-      {
-        //out_amounts[out_amounts.size() - 2] += out_amounts.back();
-        //out_amounts.resize(out_amounts.size() - 1);
-        out_amounts[1] += out_amounts[0];
-        for (size_t n = 1; n < out_amounts.size(); ++n)
-          out_amounts[n - 1] = out_amounts[n];
-        out_amounts.pop_back();
-      }
-    }
-    else
-    {
-      CHECK_AND_ASSERT_MES(max_outs >= out_amounts.size(), false, "max_out exceeded");
-    }
-
-    uint64_t summary_amounts = 0;
-    for (size_t no = 0; no < out_amounts.size(); no++)
-    {
-      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);;
-      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-      bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
-      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << ", " << txkey.sec << ")");
-
-      r = crypto::derive_public_key(derivation, no, miner_address.m_spend_public_key, out_eph_public_key);
-      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", "<< miner_address.m_spend_public_key << ")");
-
-      txout_to_key tk;
-      tk.key = out_eph_public_key;
-
-      tx_out out;
-      summary_amounts += out.amount = out_amounts[no];
-      //out.amount = block_reward;
-      out.target = tk;
+      address_parse_info dev_addr;
+      r = get_account_address_from_str(dev_addr, nettype, std::string(config::devFund::DEV_FUND_WALLET));
+      CHECK_AND_ASSERT_MES(r, false, "Failed to parse Dev-Fund address!");
+      
+      r = crypto::generate_key_derivation(dev_addr.address.m_view_public_key, txkey.sec, derivation);
+      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << dev_addr.address.m_view_public_key << ", " << txkey.sec << ")");
+      
+      r = crypto::derive_public_key(derivation, 0, dev_addr.address.m_spend_public_key, out_eph_public_key);
+      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", 0, " << dev_addr.address.m_spend_public_key << ")");
+      
+      out = { dev_fund_amount, txout_to_key(out_eph_public_key) };
       tx.vout.push_back(out);
     }
-
-    CHECK_AND_ASSERT_MES(summary_amounts == block_reward, false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal block_reward = " << block_reward);
 
     tx.version = config::tx_settings::CURRENT_TX_VERSION;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
+    txin_gen in;
+    in.height = height;
     tx.vin.push_back(in);
 
     tx.invalidate_hashes();

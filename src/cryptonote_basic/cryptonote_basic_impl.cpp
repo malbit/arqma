@@ -84,12 +84,41 @@ namespace cryptonote {
     return config::tx_settings::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
+  bool get_dev_fund_amount(uint64_t height, uint64_t& amount)
+  {
+    amount = 0;
+    if(height < config::devFund::FUND_START)
+      return false;
+
+    height -= config::devFund::FUND_START;
+
+    if(height / config::devFund::FUND_PERIOD >= config::devFund::FUND_LENGTH)
+      return false;
+
+    if(height % config::devFund::FUND_PERIOD != 0)
+      return false;
+
+    amount = config::devFund::FUND_AMOUNT;
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  uint64_t get_dev_fund_cumulative(uint64_t height)
+  {
+    if(height < config::devFund::FUND_START)
+      return 0;
+
+    height -= config::devFund::FUND_START;
+    size_t funds = std::min(height / config::devFund::FUND_LENGTH + 1, config::devFund::FUND_LENGTH);
+    size_t amount = config::devFund::FUND_AMOUNT;
+    return funds * amount;
+  }
+  //-----------------------------------------------------------------------------------------------
   bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     const int target_minutes = DIFFICULTY_TARGET_V2 / 60;
     const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
 
-    already_generated_coins -= config::blockchain_settings::PREMINE_BURN;
+    already_generated_coins -= (config::devFund::PREMINE_BURN + get_dev_fund_cumulative(height));
 
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
     if (base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
