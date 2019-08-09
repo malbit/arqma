@@ -102,14 +102,14 @@ namespace cryptonote {
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  uint64_t get_dev_fund_cumulative(uint64_t height)
+  bool get_dev_fund_cumulative(uint64_t height)
   {
     if(height < config::devFund::FUND_START)
       return 0;
 
     height -= config::devFund::FUND_START;
-    size_t funds = std::min(height / config::devFund::FUND_LENGTH + 1, config::devFund::FUND_LENGTH);
-    size_t amount = config::devFund::FUND_AMOUNT;
+    uint64_t funds = std::min(height / config::devFund::FUND_LENGTH + 1, config::devFund::FUND_LENGTH);
+    uint64_t amount = config::devFund::FUND_AMOUNT;
     return funds * amount;
   }
   //-----------------------------------------------------------------------------------------------
