@@ -327,7 +327,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   memcpy(m_dev_view_key.data, config::devFund::DEV_FUND_WALLET_VIEWKEY, 32);
   
   address_parse_info dev_addr;
-  if(!get_account_address_from_str(dev_addr, nettype(), std::string(config::devFund::DEV_FUND_WALLET)))
+  if(!get_account_address_from_str(dev_addr, m_core.get_nettype(), std::string(config::devFund::DEV_FUND_WALLET)))
   {
     LOG_ERROR("Failed to parse Dev-Fund Wallet Address");
     return false;
