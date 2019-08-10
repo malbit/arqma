@@ -120,7 +120,7 @@ namespace cryptonote
     if(get_dev_fund_amount(height, dev_fund_amount))
     {
       address_parse_info dev_addr;
-      r = get_account_address_from_str(dev_addr, nettype, std::string(config::devFund::DEV_FUND_WALLET));
+      r = get_account_address_from_str(dev_addr, nettype(), std::string(config::devFund::DEV_FUND_WALLET));
       CHECK_AND_ASSERT_MES(r, false, "Failed to parse Dev-Fund address!");
       
       r = crypto::generate_key_derivation(dev_addr.address.m_view_public_key, txkey.sec, derivation);

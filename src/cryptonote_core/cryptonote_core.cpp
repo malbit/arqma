@@ -1151,6 +1151,7 @@ namespace cryptonote
   {
     uint64_t emission_amount = 0;
     uint64_t total_fee_amount = 0;
+    uint64_t height = m_blockchain_storage.get_current_blockchain_height();
     if (count)
     {
       const uint64_t end = start_offset + count - 1;

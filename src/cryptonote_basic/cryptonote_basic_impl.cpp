@@ -102,7 +102,7 @@ namespace cryptonote {
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool get_dev_fund_cumulative(uint64_t height)
+  uint64_t get_dev_fund_cumulative(uint64_t height)
   {
     if(height < config::devFund::FUND_START)
       return 0;
@@ -117,6 +117,7 @@ namespace cryptonote {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     const int target_minutes = DIFFICULTY_TARGET_V2 / 60;
     const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
+    uint64_t height = m_blockchain_storage.get_current_blockchain_height();
 
     already_generated_coins -= (config::devFund::PREMINE_BURN + get_dev_fund_cumulative(height));
 

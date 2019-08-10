@@ -327,7 +327,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   memcpy(m_dev_view_key.data, config::devFund::DEV_FUND_WALLET_VIEWKEY, 32);
   
   address_parse_info dev_addr;
-  if(!get_account_address_from_str(dev_addr, nettype, std::string(config::devFund::DEV_FUND_WALLET)))
+  if(!get_account_address_from_str(dev_addr, nettype(), std::string(config::devFund::DEV_FUND_WALLET)))
   {
     LOG_ERROR("Failed to parse Dev-Fund Wallet Address");
     return false;
@@ -3895,7 +3895,7 @@ leave:
     if(!validate_miner_transaction_dev(bl, m_db->height(), cumulative_block_weight, fee_summary, base_reward, already_generated_coins, bvc.m_partial_block_reward, m_hardfork->get_current_version()))
     {
       MERROR_VER("Block with id: " << id << " has incorrect miner transaction");
-      bvc.m_verification_failed = true;
+      bvc.m_verifivation_failed = true;
       return_tx_to_pool(txs);
       goto leave;
     }
@@ -3905,7 +3905,7 @@ leave:
     if(!validate_miner_transaction_old(bl, cumulative_block_weight, fee_summary, base_reward, already_generated_coins, bvc.m_partial_block_reward, m_hardfork->get_current_version()))
     {
       MERROR_VER("Block with id: " << id << " has incorrect miner transaction");
-      bvc.m_verification_failed = true;
+      bvc.m_verifivation_failed = true;
       return_tx_to_pool(txs);
       goto leave;
     }
