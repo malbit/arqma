@@ -40,10 +40,11 @@ t_command_parser_executor::t_command_parser_executor(
     uint32_t ip
   , uint16_t port
   , const boost::optional<tools::login>& login
+  , const epee::net_utils::ssl_options_t& ssl_options
   , bool is_rpc
   , cryptonote::core_rpc_server* rpc_server
   )
-  : m_executor(ip, port, login, is_rpc, rpc_server)
+  : m_executor(ip, port, login, ssl_options, is_rpc, rpc_server)
 {}
 
 bool t_command_parser_executor::print_peer_list(const std::vector<std::string>& args)
@@ -125,6 +126,13 @@ bool t_command_parser_executor::print_connections(const std::vector<std::string>
   if (!args.empty()) return false;
 
   return m_executor.print_connections();
+}
+
+bool t_command_parser_executor::print_net_stats(const std::vector<std::string>& args)
+{
+  if (!args.empty()) return false;
+
+  return m_executor.print_net_stats();
 }
 
 bool t_command_parser_executor::print_blockchain_info(const std::vector<std::string>& args)
@@ -448,36 +456,44 @@ bool t_command_parser_executor::set_limit_down(const std::vector<std::string>& a
 
 bool t_command_parser_executor::out_peers(const std::vector<std::string>& args)
 {
-	if (args.empty()) return false;
-
-	unsigned int limit;
-	try {
-		limit = std::stoi(args[0]);
-	}
-
-	catch(const std::exception& ex) {
-		_erro("stoi exception");
-		return false;
-	}
-
-	return m_executor.out_peers(limit);
+  bool set = false;
+  uint32_t limit = 0;
+  try
+  {
+    if(!args.empty())
+    {
+      limit = std::stoi(args[0]);
+      set = true;
+    }
+  }
+  
+  catch(const std::exception& ex) {
+    _erro("stoi exception");
+    return false;
+  }
+  
+  return m_executor.out_peers(set, limit);
 }
 
 bool t_command_parser_executor::in_peers(const std::vector<std::string>& args)
 {
-	if (args.empty()) return false;
-
-	unsigned int limit;
-	try {
-		limit = std::stoi(args[0]);
-	}
-
-	catch(const std::exception& ex) {
-		_erro("stoi exception");
-		return false;
-	}
-
-	return m_executor.in_peers(limit);
+  bool set = false;
+  uint32_t limit = 0;
+  try
+  {
+    if(!args.empty())
+    {
+      limit = std::stoi(args[0]);
+      set = true;
+    }
+  }
+  
+  catch(const std::exception& ex) {
+    _erro("stoi exception");
+    return false;
+  }
+  
+  return m_executor.in_peers(set, limit);
 }
 
 bool t_command_parser_executor::start_save_graph(const std::vector<std::string>& args)
@@ -708,6 +724,13 @@ bool t_command_parser_executor::pop_blocks(const std::vector<std::string>& args)
     std::cout << "number of blocks must be a number greater than 0" << std::endl;
   }
   return false;
+}
+
+bool t_command_parser_executor::rpc_payments(const std::vector<std::string>& args)
+{
+  if (args.size() != 0) return false;
+
+  return m_executor.rpc_payments();
 }
 
 bool t_command_parser_executor::version(const std::vector<std::string>& args)

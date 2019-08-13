@@ -86,6 +86,19 @@ namespace hw {
       AKout = keys.AKout;
     }
 
+    ABPkeys &ABPkeys::operator=(const ABPkeys& keys) {
+      if (&keys == this)
+        return *this;
+      Aout = keys.Aout;
+      Bout = keys.Bout;
+      is_subaddress = keys.is_subaddress;
+      additional_key = keys.additional_key;
+      index = keys.index;
+      Pout = keys.Pout;
+      AKout = keys.AKout;
+      return *this;
+    }
+
     bool Keymap::find(const rct::key& P, ABPkeys& keys) const {
       size_t sz = ABP.size();
       for (size_t i=0; i<sz; i++) {
@@ -397,7 +410,7 @@ namespace hw {
            CHECK_AND_ASSERT_THROW_MES(false, " device_ledger::set_mode(unsigned int mode): invalid mode: "<<mode);
         }
         MDEBUG("Switch to mode: " <<mode);
-        return true;
+        return device::set_mode(mode);
     }
 
 
@@ -790,8 +803,6 @@ namespace hw {
         }
 
         #ifdef DEBUG_HWDEVICE
-        bool recover_x = recover;
-        const crypto::secret_key recovery_key_x = recovery_key;
         crypto::public_key pub_x;
         crypto::secret_key sec_x;
         #endif
@@ -1266,7 +1277,7 @@ namespace hw {
         this->exchange();
 
         //pseudoOuts
-        if ((type == rct::RCTTypeSimple) || (type == rct::RCTTypeSimpleBulletproof)) {
+        if (type == rct::RCTTypeSimple) {
           for ( i = 0; i < inputs_size; i++) {
             offset = set_command_header(INS_VALIDATE, 0x01, i+2);
             //options

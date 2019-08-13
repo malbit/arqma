@@ -44,10 +44,11 @@ t_command_server::t_command_server(
     uint32_t ip
   , uint16_t port
   , const boost::optional<tools::login>& login
+  , const epee::net_utils::ssl_options_t& ssl_options
   , bool is_rpc
   , cryptonote::core_rpc_server* rpc_server
   )
-  : m_parser(ip, port, login, is_rpc, rpc_server)
+  : m_parser(ip, port, login, ssl_options, is_rpc, rpc_server)
   , m_command_lookup()
   , m_is_rpc(is_rpc)
 {
@@ -77,6 +78,11 @@ t_command_server::t_command_server(
       "print_cn"
     , std::bind(&t_command_parser_executor::print_connections, &m_parser, p::_1)
     , "Print the current connections."
+    );
+  m_command_lookup.set_handler(
+      "print_net_stats"
+    , std::bind(&t_command_parser_executor::print_net_stats, &m_parser, p::_1)
+    , "Print network statistics."
     );
   m_command_lookup.set_handler(
       "print_bc"
@@ -288,6 +294,11 @@ t_command_server::t_command_server(
     , std::bind(&t_command_parser_executor::pop_blocks, &m_parser, p::_1)
     , "pop_blocks <nblocks>"
     , "Remove blocks from the end of the blockchain"
+    );
+    m_command_lookup.set_handler(
+      "rpc_payments"
+    , std::bind(&t_command_parser_executor::rpc_payments, &m_parser, p::_1)
+    , "Print information about RPC payments."
     );
     m_command_lookup.set_handler(
       "version"

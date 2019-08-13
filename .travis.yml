@@ -2,11 +2,18 @@ sudo: required
 dist: bionic
 os: linux
 language: minimal
+notifications:
+  webhooks: 
+    urls:
+      - https://discordhooks.herokuapp.com/travis
+    on_success: always
+    on_failure: always
+    on_start: always
 cache:
   directories:
-  - contrib/depends/built
-  - contrib/depends/sdk-sources
-  - $HOME/.ccache
+    - contrib/depends/built
+    - contrib/depends/sdk-sources
+    - $HOME/.ccache
 env:
   global:
     - MAKEJOBS=-j3
@@ -16,7 +23,7 @@ env:
     - CCACHE_DIR=$HOME/.ccache
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
     - SDK_URL=https://bitcoincore.org/depends-sources/sdks
-    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache"
+    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache xsltproc"
   matrix:
 # ARM v7
     - HOST=arm-linux-gnueabihf PACKAGES="python3 gperf g++-arm-linux-gnueabihf"
@@ -56,5 +63,4 @@ script:
     - $DOCKER_EXEC bash -c "mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$TRAVIS_BUILD_DIR/contrib/depends/$HOST/share/toolchain.cmake .. && make $MAKEJOBS"
     - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/contrib/depends/$HOST/lib
 after_script:
-    - echo $TRAVIS_COMMIT_RANGE
     - echo $TRAVIS_COMMIT_LOG

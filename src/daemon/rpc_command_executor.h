@@ -44,6 +44,7 @@
 #include "common/common_fwd.h"
 #include "common/rpc_client.h"
 #include "cryptonote_basic/cryptonote_basic.h"
+#include "net/net_fwd.h"
 #include "rpc/core_rpc_server.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -62,6 +63,7 @@ public:
       uint32_t ip
     , uint16_t port
     , const boost::optional<tools::login>& user
+    , const epee::net_utils::ssl_options_t& ssl_options
     , bool is_rpc = true
     , cryptonote::core_rpc_server* rpc_server = NULL
     );
@@ -122,9 +124,9 @@ public:
 
   bool set_limit(int64_t limit_down, int64_t limit_up);
 
-  bool out_peers(uint64_t limit);
+  bool out_peers(bool set, uint32_t limit);
 
-  bool in_peers(uint64_t limit);
+  bool in_peers(bool set, uint32_t limit);
 
   bool start_save_graph();
 
@@ -159,6 +161,10 @@ public:
   bool prune_blockchain();
 
   bool check_blockchain_pruning();
+
+  bool rpc_payments();
+  
+  bool print_net_stats();
 };
 
 } // namespace daemonize

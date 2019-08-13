@@ -201,10 +201,13 @@ set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
 
 # set this to 0 if per-block checkpoint needs to be disabled
-set(PER_BLOCK_CHECKPOINT 0)
+set(PER_BLOCK_CHECKPOINT 1)
 
 if(PER_BLOCK_CHECKPOINT)
   add_definitions("-DPER_BLOCK_CHECKPOINT")
+  set(Blocks "blocks")
+else()
+  set(Blocks "")
 endif()
 
 list(INSERT CMAKE_MODULE_PATH 0
@@ -295,6 +298,12 @@ else()
   set(DEFAULT_STATIC false)
 endif()
 option(STATIC "Link libraries statically" ${DEFAULT_STATIC})
+
+# On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
+# Fixes the error: expected ‘)’ before ‘PRIx64’ 
+if(WIN32 OR MSVC OR MINGW)
+  add_definitions(-D__STDC_FORMAT_MACROS)
+endif()
 
 # This is a CMake built-in switch that concerns internal libraries
 if (NOT DEFINED BUILD_SHARED_LIBS AND NOT STATIC AND CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
@@ -666,8 +675,10 @@ else()
     add_cxx_flag_if_supported(-fstack-clash-protection CXX_SECURITY_FLAGS)
   endif()
 
-  add_c_flag_if_supported(-mmitigate-rop C_SECURITY_FLAGS)
-  add_cxx_flag_if_supported(-mmitigate-rop CXX_SECURITY_FLAGS)
+  if (NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
+    add_c_flag_if_supported(-mmitigate-rop C_SECURITY_FLAGS)
+    add_cxx_flag_if_supported(-mmitigate-rop CXX_SECURITY_FLAGS)
+  endif()
 
   # linker
   if (NOT WIN32)
@@ -870,10 +881,10 @@ if (${BOOST_IGNORE_SYSTEM_PATHS} STREQUAL "ON")
 endif()
 
 set(OLD_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+set(Boost_NO_BOOST_CMAKE ON)
 if(STATIC)
   if(MINGW)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
-    set(Boost_NO_BOOST_CMAKE ON)
   endif()
 
   set(Boost_USE_STATIC_LIBS ON)
