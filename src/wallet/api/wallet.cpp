@@ -61,7 +61,7 @@ namespace Monero {
 
 namespace {
     // copy-pasted from simplewallet
-    static const size_t DEFAULT_MIXIN = 10;
+    static const size_t DEFAULT_MIXIN = 6;
     static const int    DEFAULT_REFRESH_INTERVAL_MILLIS = 1000 * 10;
     // limit maximum refresh interval as one minute
     static const int    MAX_REFRESH_INTERVAL_MILLIS = 1000 * 60 * 1;
@@ -1347,7 +1347,6 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
     size_t fake_outs_count = mixin_count > 0 ? mixin_count : m_wallet->default_mixin();
     if (fake_outs_count == 0)
         fake_outs_count = DEFAULT_MIXIN;
-    fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
 
     uint32_t adjusted_priority = m_wallet->adjust_priority(static_cast<uint32_t>(priority));
 
@@ -2149,7 +2148,7 @@ void WalletImpl::hardForkInfo(uint8_t &version, uint64_t &earliest_height) const
 
 bool WalletImpl::useForkRules(uint8_t version, int64_t early_blocks) const
 {
-    return m_wallet->use_fork_rules(version,early_blocks);
+    return m_wallet->use_fork_rules(version, early_blocks);
 }
 
 bool WalletImpl::blackballOutputs(const std::vector<std::string> &outputs, bool add)
