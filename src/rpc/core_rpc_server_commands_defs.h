@@ -88,8 +88,8 @@ namespace cryptonote
 // whether they can talk to a given daemon without having to know in
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
-#define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 14
+#define CORE_RPC_VERSION_MAJOR 3
+#define CORE_RPC_VERSION_MINOR 3
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -126,7 +126,7 @@ namespace cryptonote
   {
     uint64_t credits;
     std::string top_hash;
-    
+
     rpc_access_response_base(): credits(0) {}
 
     BEGIN_KV_SERIALIZE_MAP()
@@ -919,6 +919,8 @@ namespace cryptonote
       uint64_t reserved_offset;
       uint64_t expected_reward;
       std::string prev_hash;
+      std::string seed_hash;
+      std::string next_seed_hash;
       blobdata blocktemplate_blob;
       blobdata blockhashing_blob;
 
@@ -929,6 +931,8 @@ namespace cryptonote
         KV_SERIALIZE(reserved_offset)
         KV_SERIALIZE(expected_reward)
         KV_SERIALIZE(prev_hash)
+        KV_SERIALIZE(seed_hash)
+        KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(blocktemplate_blob)
         KV_SERIALIZE(blockhashing_blob)
       END_KV_SERIALIZE_MAP()
@@ -1054,11 +1058,13 @@ namespace cryptonote
     struct request_t: public rpc_access_request_base
     {
       std::string hash;
+      std::vector<std::string> hashes;
       bool fill_pow_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_request_base)
         KV_SERIALIZE(hash)
+        KV_SERIALIZE(hashes)
         KV_SERIALIZE_OPT(fill_pow_hash, false);
       END_KV_SERIALIZE_MAP()
     };
@@ -1067,10 +1073,12 @@ namespace cryptonote
     struct response_t: public rpc_access_response_base
     {
       block_header_response block_header;
+      std::vector<block_header_response> block_headers;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(block_header)
+        KV_SERIALIZE(block_headers)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -1201,13 +1209,13 @@ namespace cryptonote
     uint64_t last_seen;
     uint16_t rpc_port;
     uint32_t rpc_credits_per_hash;
-    
+
     public_node(): last_seen(0), rpc_port(0), rpc_credits_per_hash(0) {}
-    
+
     public_node(const peer &peer)
       : host(peer.host), last_seen(peer.last_seen), rpc_port(peer.rpc_port), rpc_credits_per_hash(peer.rpc_credits_per_hash)
     {}
-      
+
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(host)
       KV_SERIALIZE(last_seen)
@@ -1222,7 +1230,7 @@ namespace cryptonote
     {
       bool gray;
       bool white;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE_OPT(gray, false)
@@ -1230,12 +1238,12 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t: public rpc_response_base
     {
       std::vector<public_node> gray;
       std::vector<public_node> white;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(gray)
@@ -1551,6 +1559,66 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+struct COMMAND_RPC_GET_BLOCKS_RANGE
+  {
+    struct blocks_transaction_entry
+    {
+      std::string tx_hash;
+      std::string as_json;
+
+      blocks_transaction_entry() = default;
+
+      blocks_transaction_entry(const std::string &tx_hash, const std::string &as_json)
+        : tx_hash(tx_hash), as_json(as_json)
+      {}
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(tx_hash)
+        KV_SERIALIZE(as_json)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct blocks_entry {
+      block_header_response block_header;
+      std::vector<blocks_transaction_entry> txs;
+
+      blocks_entry() = default;
+
+      blocks_entry(block_header_response block_header, std::vector<blocks_transaction_entry> &txs)
+        : block_header(block_header), txs(txs)
+      {}
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(block_header)
+        KV_SERIALIZE(txs)
+      END_KV_SERIALIZE_MAP()
+    };
+
+struct request_t: public rpc_access_request_base
+    {
+      uint64_t start_height;
+      uint64_t end_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_access_request_base)
+        KV_SERIALIZE(start_height)
+        KV_SERIALIZE(end_height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t: public rpc_access_response_base
+    {
+      std::vector<blocks_entry> blocks;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
+        KV_SERIALIZE(blocks)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
   struct COMMAND_RPC_GET_BLOCK_HEADERS_RANGE
   {
     struct request_t: public rpc_access_request_base
@@ -1701,7 +1769,7 @@ namespace cryptonote
     struct request_t: public rpc_request_base
     {
       bool set;
-      uint32_t in_peers;      
+      uint32_t in_peers;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE_OPT(set, true)
@@ -2057,7 +2125,7 @@ namespace cryptonote
 
     struct response_t: public rpc_response_base
     {
-      std::list<chain_info> chains;
+      std::vector<chain_info> chains;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
@@ -2278,6 +2346,8 @@ namespace cryptonote
     struct response_t: public rpc_access_response_base
     {
       std::string hashing_blob;
+      std::string seed_hash;
+      std::string next_seed_hash;
       uint32_t cookie;
       uint64_t diff;
       uint64_t credits_per_hash_found;
@@ -2286,6 +2356,8 @@ namespace cryptonote
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(hashing_blob)
+        KV_SERIALIZE(seed_hash)
+        KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(cookie)
         KV_SERIALIZE(diff)
         KV_SERIALIZE(credits_per_hash_found)
@@ -2438,7 +2510,7 @@ namespace cryptonote
     {
       std::string client;
       int64_t delta_balance;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(client)
@@ -2446,11 +2518,11 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t: public rpc_response_base
     {
       uint64_t credits;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(credits)

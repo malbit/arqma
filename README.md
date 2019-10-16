@@ -9,13 +9,14 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Web: [arqma.com](https://arqma.com)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
-- Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
-- Telegram: [https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw](https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw)
+- Discord: [https://chat.arqma.com](https://chat.arqma.com)
+- Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
 
 ## Other Arqma related websites
 
 - Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
 - Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
+- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools List: [https://pools.arqma.com](https://pools.arqma.com)
@@ -37,6 +38,8 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
 - Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
+- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
+- QBTC: [https://www.qbtc.ink/trade?symbol=ARQ_CNYT](https://www.qbtc.ink/trade?symbol=ARQ_CNYT)
 
 ## Introduction
 
@@ -89,8 +92,8 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
 
-Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
-
+[![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
+![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
 
@@ -110,7 +113,7 @@ library archives (`.a`).
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
 | Boost        | 1.62          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | basically any | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
-| libzmq       | 3.0.0         | NO       | `libzmq3-dev`      | `zeromq`     | `cppzmq-devel`    | NO       | ZeroMQ library |
+| libzmq       | 3.0.0         | NO       | `libzmq3-dev`      | `zeromq`     | `zeromq-devel`    | NO       | ZeroMQ library |
 | OpenPGM      | ????          | NO       | `libpgm-dev`       | `libpgm`     | `openpgm-devel`   | NO       | For ZeroMQ     |
 | libnorm[2]   | ?             | NO       | `libnorm-dev`      |              |               `   | YES      | For ZeroMQ     |
 | libunbound   | 1.4.16        | YES      | `libunbound-dev`   | `unbound`    | `unbound-devel`   | NO       | DNS resolver   |
@@ -141,7 +144,7 @@ Debian / Ubuntu one liner for all dependencies
 
 Install all dependencies at once on OSX:
 
-``` brew update && brew install cmake pkg-config boost zmq libpgm unbound libsodium miniupnpc libunwind-headers xz readline ldns expat doxygen graphviz protobuf ```
+``` brew update && brew bundle --file=contrib/apple/brew ```
 
 ### Cloning the repository
 
@@ -449,7 +452,6 @@ Then you can run make as usual.
 By default, in either dynamically or statically linked builds, binaries target the specific host processor on which the build happens and are not portable to other processors. Portable binaries can be built using the following targets:
 
 * ```make release-static-linux-x86_64``` builds binaries on Linux on x86_64 portable across POSIX systems on x86_64 processors
-* ```make release-static-linux-i686``` builds binaries on Linux on x86_64 or i686 portable across POSIX systems on i686 processors
 * ```make release-static-linux-armv8``` builds binaries on Linux portable across POSIX systems on armv8 processors
 * ```make release-static-linux-armv7``` builds binaries on Linux portable across POSIX systems on armv7 processors
 * ```make release-static-linux-armv6``` builds binaries on Linux portable across POSIX systems on armv6 processors
@@ -462,7 +464,6 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
 * ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
-* ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
