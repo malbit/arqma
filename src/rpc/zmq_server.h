@@ -30,11 +30,12 @@
 #pragma once
 
 #include <boost/thread/thread.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <zmq.hpp>
+#include <string>
+#include <memory>
 
 #include "common/command_line.h"
 
-#include "net/zmq.h"
 #include "rpc_handler.h"
 
 namespace cryptonote
@@ -42,6 +43,9 @@ namespace cryptonote
 
 namespace rpc
 {
+
+static constexpr int DEFAULT_NUM_ZMQ_THREADS = 1;
+static constexpr int DEFAULT_RPC_RECV_TIMEOUT_MS = 1000;
 
 class ZmqServer
 {
@@ -55,8 +59,8 @@ class ZmqServer
 
     void serve();
 
-    bool addIPCSocket(boost::string_ref address, boost::string_ref port);
-    bool addTCPSocket(boost::string_ref address, boost::string_ref port);
+    bool addIPCSocket(std::string address, std::string port);
+    bool addTCPSocket(std::string address, std::string port);
 
     void run();
     void stop();
@@ -64,11 +68,14 @@ class ZmqServer
   private:
     RpcHandler& handler;
 
-    net::zmq::context context;
+    volatile bool stop_signal;
+    volatile bool running;
+
+    zmq::context_t context;
 
     boost::thread run_thread;
 
-    net::zmq::socket rep_socket;
+    std::unique_ptr<zmq::socket_t> rep_socket;
 };
 
 
