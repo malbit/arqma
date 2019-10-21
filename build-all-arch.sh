@@ -34,38 +34,40 @@
 			   sixtyfour=ON
 			   ;;
       *)
-			exit 16
-            ;;
+			   exit 16
+                           ;;
     esac
 
- 	OUTPUT_DIR=$base_dir/build/$build_type.$arch
- 	mkdir -p $OUTPUT_DIR
-	cd $OUTPUT_DIR
- 	PATH=/opt/android/tool/$arch/$target_host/bin:/opt/android/tool/$arch/bin:$PATH \
-  CC=clang CXX=clang++ \
-  cmake \
-    -D CMAKE_LIBRARY_PATH=/opt/android/build/libsodium/$arch/lib \
-    -D PER_BLOCK_CHECKPOINT=1 \
-    -D BUILD_GUI_DEPS=1 \
-    -D BUILD_TESTS=OFF \
-    -D ARCH="$xarch" \
-    -D STATIC=ON \
-    -D BUILD_64=$sixtyfour \
-    -D CMAKE_BUILD_TYPE=$build_type \
-    -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api -isystem /opt/android/build/libsodium/$arch/include/" \
-    -D ANDROID=true \
-    -D BUILD_TAG="android" \
-    -D BOOST_ROOT=/opt/android/build/boost/$arch \
-    -D BOOST_LIBRARYDIR=/opt/android/build/boost/$arch/lib \
-    -D OPENSSL_ROOT_DIR=/opt/android/build/openssl/$arch \
-    -D OPENSSL_INCLUDE_DIR=/opt/android/build/openssl/include \
-    -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so \
-    -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so \
-    -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true \
-    $extra_cmake_flags ../..
+    OUTPUT_DIR=$base_dir/build/$build_type.$arch
+    rm -rf $OUTPUT_DIR
+    mkdir -p $OUTPUT_DIR
+    cd $OUTPUT_DIR
 
-	make -j2 wallet_api
-	find . -path ./lib -prune -o -name '*.a' -exec cp '{}' lib \;
+    PATH=/opt/android/tool/$arch/$target_host/bin:/opt/android/tool/$arch/bin:$PATH \
+    CC=clang CXX=clang++ \
+    CMAKE_LIBRARY_PATH=/opt/android/build/libsodium/$arch/lib \
+    cmake \
+      -D PER_BLOCK_CHECKPOINT=1 \
+      -D BUILD_GUI_DEPS=1 \
+      -D BUILD_TESTS=OFF \
+      -D ARCH="$xarch" \
+      -D STATIC=ON \
+      -D BUILD_64=$sixtyfour \
+      -D CMAKE_BUILD_TYPE=$build_type \
+      -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api -isystem /opt/android/build/libsodium/$arch/include/" \
+      -D ANDROID=true \
+      -D BUILD_TAG="android" \
+      -D BOOST_ROOT=/opt/android/build/boost/$arch \
+      -D BOOST_LIBRARYDIR=/opt/android/build/boost/$arch/lib \
+      -D OPENSSL_ROOT_DIR=/opt/android/build/openssl/$arch \
+      -D OPENSSL_INCLUDE_DIR=/opt/android/build/openssl/include \
+      -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so \
+      -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so \
+      -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true \
+      $extra_cmake_flags ../..
+
+    make -j6 wallet_api
+    find . -path ./lib -prune -o -name '*.a' -exec cp '{}' lib \;
 
   TARGET_LIB_DIR=/opt/android/build/arqma/$arch/lib
   rm -rf $TARGET_LIB_DIR
