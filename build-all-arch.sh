@@ -4,7 +4,7 @@
 
  set -e
  orig_path=$PATH
-base_dir=`pwd`
+ base_dir=`pwd`
  build_type=release # or debug
  android_api=21
  archs=(arm arm64 x86 x86_64)
@@ -18,21 +18,21 @@ base_dir=`pwd`
 			   xarch=armv7-a
 			   sixtyfour=OFF
 			   extra_cmake_flags="-D NO_AES=true"
-		     ;;
+			   ;;
       "arm64")
 			   target_host=aarch64-linux-android
 			   xarch="armv8-a"
- 	       sixtyfour=ON
-        ;;
+			   sixtyfour=ON
+			   ;;
       "x86")
 			   target_host=i686-linux-android
 			   xarch="i686"
-         ;;
+			   ;;
       "x86_64")
 			   target_host=x86_64-linux-android
 			   xarch="x86-64"
 			   sixtyfour=ON
-         ;;
+			   ;;
       *)
 			exit 16
             ;;
@@ -45,6 +45,7 @@ base_dir=`pwd`
   CC=clang CXX=clang++ \
   cmake \
     -D CMAKE_LIBRARY_PATH=/opt/android/build/libsodium/$arch/lib \
+    -D PER_BLOCK_CHECKPOINT=1 \
     -D BUILD_GUI_DEPS=1 \
     -D BUILD_TESTS=OFF \
     -D ARCH="$xarch" \
