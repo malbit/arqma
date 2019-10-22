@@ -27,6 +27,7 @@
       "x86")
 			   target_host=i686-linux-android
 			   xarch="i686"
+                           sixtyfour=OFF
 			   ;;
       "x86_64")
 			   target_host=x86_64-linux-android
@@ -47,14 +48,13 @@
     CC=clang CXX=clang++ \
     CMAKE_LIBRARY_PATH=/opt/android/build/libsodium/$arch/lib \
     cmake \
-      -D PER_BLOCK_CHECKPOINT=1 \
       -D BUILD_GUI_DEPS=1 \
       -D BUILD_TESTS=OFF \
       -D ARCH="$xarch" \
       -D STATIC=ON \
       -D BUILD_64=$sixtyfour \
       -D CMAKE_BUILD_TYPE=$build_type \
-      -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api -isystem /opt/android/build/libsodium/$arch/include/" \
+      -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api" \
       -D ANDROID=true \
       -D BUILD_TAG="android" \
       -D BOOST_ROOT=/opt/android/build/boost/$arch \
@@ -64,6 +64,7 @@
       -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so \
       -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so \
       -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true \
+      -D LIBSODIUM_INCLUDE_DIR=/opt/android/build/libsodium/$arch/include \
       $extra_cmake_flags ../..
 
     make -j6 wallet_api

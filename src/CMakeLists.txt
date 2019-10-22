@@ -127,7 +127,6 @@ if(NOT IOS)
   add_subdirectory(simplewallet)
   #add_subdirectory(gen_multisig)
   add_subdirectory(gen_ssl_cert)
-  
   add_subdirectory(daemon)
   add_subdirectory(blockchain_utilities)
 endif()
