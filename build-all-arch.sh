@@ -10,7 +10,8 @@
  archs=(arm arm64 x86 x86_64)
 #archs=(x86)
  for arch in ${archs[@]}; do
-	extra_cmake_flags=""
+    ldflags=""
+    extra_cmake_flags=""
 
     case ${arch} in
       "arm")
