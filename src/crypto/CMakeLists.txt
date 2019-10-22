@@ -47,6 +47,7 @@ set(crypto_sources
   oaes_lib.c
   random.c
   skein.c
+  cn_old_hash.c
   slow-hash.c
   rx-slow-hash.c
   tree-hash.c)
