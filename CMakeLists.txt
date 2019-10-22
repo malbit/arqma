@@ -28,6 +28,9 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)
@@ -47,6 +50,8 @@ cmake_minimum_required(VERSION 3.5.0)
 message(STATUS "CMake version ${CMAKE_VERSION}")
 
 project(arqma)
+
+enable_language(C ASM)
 
 function (die msg)
   if (NOT WIN32)
