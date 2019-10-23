@@ -29,8 +29,6 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)
@@ -257,6 +255,12 @@ enable_testing()
 
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 option(BUILD_TESTS "Build tests." OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(DEFAULT_BUILD_DEBUG_UTILITIES ON)
+else()
+  set(DEFAULT_BUILD_DEBUG_UTILITIES OFF)
+endif()
+option(BUILD_DEBUG_UTILITIES "Build debug utilities." DEFAULT_BUILD_DEBUG_UTILITIES)
 
 # Check whether we're on a 32-bit or 64-bit system
 if(CMAKE_SIZEOF_VOID_P EQUAL "8")
