@@ -51,7 +51,7 @@ set(arqma_mq_headers)
 set(arqma_mq_private_headers
     arqmaMQ.h
     INotifier.h
-	zmq_handler.h)
+    zmq_handler.h)
 
 arqma_private_headers(arqma_mq
   ${arqma_mq_private_headers})
@@ -66,12 +66,12 @@ target_link_libraries(arqma_mq
     common
     epee
     net
-	rpc
-	daemon_messages
-	cryptonote_core
+    rpc
+    daemon_messages
+    cryptonote_core
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
-    ${ZMQ_LIB}
+    ${ZMQ_LIBRARIES}
     ${EXTRA_LIBRARIES})
 
 add_dependencies(arqma_mq

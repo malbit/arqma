@@ -3,14 +3,18 @@
 #  -D BOOST_ROOT=/opt/android/boost_1_67_0
 
  set -e
+
  orig_path=$PATH
  base_dir=`pwd`
+
  build_type=release # or debug
+
  android_api=21
  archs=(arm arm64 x86 x86_64)
-#archs=(x86)
+ #archs=(arm64)
+
+ orig_cxx_flags=$CXXFLAGS
  for arch in ${archs[@]}; do
-    ldflags=""
     extra_cmake_flags=""
 
     case ${arch} in
@@ -45,9 +49,10 @@
     mkdir -p $OUTPUT_DIR
     cd $OUTPUT_DIR
 
+    export PKG_CONFIG_PATH="/opt/android/build/libsodium/$arch/lib/pkgconfig:/opt/android/build/libzmq/$arch/lib/pkgconfig"
+    export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/opt/android/build/boost/$arch/include
     PATH=/opt/android/tool/$arch/$target_host/bin:/opt/android/tool/$arch/bin:$PATH \
     CC=clang CXX=clang++ \
-    CMAKE_LIBRARY_PATH=/opt/android/build/libsodium/$arch/lib \
     cmake \
       -D BUILD_GUI_DEPS=1 \
       -D BUILD_TESTS=OFF \
@@ -55,7 +60,7 @@
       -D STATIC=ON \
       -D BUILD_64=$sixtyfour \
       -D CMAKE_BUILD_TYPE=$build_type \
-      -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api" \
+      -D CMAKE_CXX_FLAGS="-D__ANDROID_API__=$android_api -isystem /opt/android/build/libsodium/$arch/include/" \
       -D ANDROID=true \
       -D BUILD_TAG="android" \
       -D BOOST_ROOT=/opt/android/build/boost/$arch \
@@ -65,22 +70,20 @@
       -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so \
       -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so \
       -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true \
-      -D LIBSODIUM_INCLUDE_DIR=/opt/android/build/libsodium/$arch/include \
-      $extra_cmake_flags ../..
+       $extra_cmake_flags ../..
 
-    make -j6 wallet_api
-    find . -path ./lib -prune -o -name '*.a' -exec cp '{}' lib \;
+    make -j12 wallet_api VERBOSE=1
 
-  TARGET_LIB_DIR=/opt/android/build/arqma/$arch/lib
-  rm -rf $TARGET_LIB_DIR
-  mkdir -p $TARGET_LIB_DIR
-  cp $OUTPUT_DIR/lib/*.a $TARGET_LIB_DIR
+    TARGET_LIB_DIR=/opt/android/build/arqma/$arch/lib
+    rm -rf $TARGET_LIB_DIR
+    mkdir -p $TARGET_LIB_DIR
+    find $OUTPUT_DIR -name '*.a' -exec cp '{}' $TARGET_LIB_DIR \;
 
-  TARGET_INC_DIR=/opt/android/build/arqma/include
-  rm -rf $TARGET_INC_DIR
-  mkdir -p $TARGET_INC_DIR
-	cp -a ../../src/wallet/api/wallet2_api.h $TARGET_INC_DIR
+    TARGET_INC_DIR=/opt/android/build/arqma/include
+    rm -rf $TARGET_INC_DIR
+    mkdir -p $TARGET_INC_DIR
+    cp -a ../../src/wallet/api/wallet2_api.h $TARGET_INC_DIR
 
-  cd $base_dir
+    cd $base_dir
 done
 exit 0
