@@ -34,6 +34,9 @@
 #include "string_tools.h"
 using namespace epee;
 
+#include "arqma_mq/arqmaMQ.h"
+using namespace arqmaMQ;
+
 #include <unordered_set>
 #include "cryptonote_core.h"
 #include "common/util.h"
@@ -53,6 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
+#include "daemon/command_line_args.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -600,6 +604,38 @@ namespace cryptonote
       MERROR("Failed to parse block notify spec");
     }
 
+	if(auto zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled))
+	{
+      try
+      {
+		auto zmq_ip_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
+        auto zmq_port_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
+        uint32_t zmq_ip;
+        uint16_t zmq_port;
+
+        uint16_t zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
+        if(!epee::string_tools::get_ip_int32_from_string(zmq_ip, zmq_ip_str))
+        {
+          std::cerr << "Invalid ZMQ IP Address given: " << zmq_ip_str << std::endl;
+          return false;
+        }
+        if(!epee::string_tools::get_xtype_from_string(zmq_port, zmq_port_str))
+        {
+          std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
+          return false;
+        }
+
+        m_blockchain_storage.set_zmq_options(zmq_ip_str,
+                                             zmq_port_str,
+                                             zmq_max_clients,
+                                             zmq_enabled);
+      }
+      catch (const std::exception &e)
+      {
+        MERROR("Failed to parse zmq options to blockchain");
+      }
+	}
+
     try
     {
       if (!command_line::is_arg_defaulted(vm, arg_reorg_notify))
@@ -655,7 +691,7 @@ namespace cryptonote
 
     r = m_miner.init(vm, m_nettype);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize miner instance");
-    
+
     if(!keep_alt_blocks && !m_blockchain_storage.get_db().is_read_only())
       m_blockchain_storage.get_db().drop_alt_blocks();
 
@@ -1160,7 +1196,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 215000 : 0;
+    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 300000 : 0;
     if(block_sync_size > 0)
       return block_sync_size;
     if(height >= quick_height)
@@ -1198,10 +1234,11 @@ namespace cryptonote
       total_fee_amount += tx_fee_amount;
       return true;
       });
+      // Remove Burned Premine Amount from coinbase emission
+      if (start_offset<= 1 && 1 <= end){
+        emission_amount -= config::blockchain_settings::PREMINE_BURN;
+      }
     }
-
-    // Remove Burned Premine Amount from coinbase emission
-    emission_amount -= config::blockchain_settings::PREMINE_BURN;
 
     return std::pair<uint64_t, uint64_t>(emission_amount, total_fee_amount);
   }
