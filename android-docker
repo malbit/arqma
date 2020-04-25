@@ -114,10 +114,10 @@ RUN set -ex \
 
 ## Building ZMQ
 RUN cd /opt/android/libzmq \
-    && PATH=/opt/android/tool/arm/arm-linux-androideabi/bin:/opt/android/tool/arm/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/arm --host=arm-linux-androideabi --with-libsodium=yes --enable-static --disable-shared && make && make install && ldconfig && make clean \
-    && PATH=/opt/android/tool/arm64/aarch64-linux-android/bin:/opt/android/tool/arm64/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/arm64 --host=aarch64-linux-android --with-libsodium=yes --enable-static --disable-shared && make && make install && ldconfig && make clean \
-    && PATH=/opt/android/tool/x86/i686-linux-android/bin:/opt/android/tool/x86/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86 --host=i686-linux-android --with-libsodium=yes --enable-static --disable-shared && make && make install && ldconfig && make clean \
-    && PATH=/opt/android/tool/x86_64/x86_64-linux-android/bin:/opt/android/tool/x86_64/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86_64 --host=x86_64-linux-android --with-libsodium=yes --enable-static --disable-shared && make && make install && ldconfig && make clean
+    && PATH=/opt/android/tool/arm/arm-linux-androideabi/bin:/opt/android/tool/arm/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/arm --host=arm-linux-androideabi --with-libsodium --enable-static --disable-shared && make && make install && ldconfig && make clean \
+    && PATH=/opt/android/tool/arm64/aarch64-linux-android/bin:/opt/android/tool/arm64/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/arm64 --host=aarch64-linux-android --with-libsodium --enable-static --disable-shared && make && make install && ldconfig && make clean \
+    && PATH=/opt/android/tool/x86/i686-linux-android/bin:/opt/android/tool/x86/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86 --host=i686-linux-android --with-libsodium --enable-static --disable-shared && make && make install && ldconfig && make clean \
+    && PATH=/opt/android/tool/x86_64/x86_64-linux-android/bin:/opt/android/tool/x86_64/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86_64 --host=x86_64-linux-android --with-libsodium --enable-static --disable-shared && make && make install && ldconfig && make clean
 
 # zmq.hpp
 ARG CPPZMQ_VERSION=v4.6.0
