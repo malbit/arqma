@@ -120,7 +120,8 @@ RUN set -ex \
     && git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1 \
-    && mv *.hpp /opt/android/build/libzmq/include
+    && mkdir -p /opt/android/build/cppzmq/include \
+    && mv *.hpp /opt/android/build/cppzmq/include/
 
 # Building Arqma from the latest commit on android branch, this should be kept up to date with master
 # with the necessary fixes by m@lbit, crtlib and m2049r to build for mobile.
@@ -135,6 +136,6 @@ RUN cd /opt/android \
 # comment out the section above that pulls from github.
 # ADD arqma /opt/android/arqma
 # RUN cd /opt/android/arqma \
-#      && rm -rf build \
-#      && mkdir -p build/release \
-#      && ./build-all-arch.sh
+#     && rm -rf build \
+#     && mkdir -p build/release \
+#     && ./build-all-arch.sh

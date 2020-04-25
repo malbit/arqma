@@ -65,7 +65,7 @@
       -D BUILD_TAG="android" \
       -D BOOST_ROOT=/opt/android/build/boost/$arch \
       -D BOOST_LIBRARYDIR=/opt/android/build/boost/$arch/lib \
-      -D ZMQ_INCLUDE_DIRS=/opt/android/build/libzmq/include \
+      -D ZMQ_INCLUDE_DIRS=/opt/android/build/cppzmq/include \
       -D OPENSSL_ROOT_DIR=/opt/android/build/openssl/$arch \
       -D OPENSSL_INCLUDE_DIR=/opt/android/build/openssl/include \
       -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so \
