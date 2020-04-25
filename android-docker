@@ -112,6 +112,16 @@ RUN cd /opt/android/libzmq \
     && PATH=/opt/android/tool/x86/i686-linux-android/bin:/opt/android/tool/x86/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86 --host=i686-linux-android --enable-static --disable-shared && make && make install && ldconfig && make clean \
     && PATH=/opt/android/tool/x86_64/x86_64-linux-android/bin:/opt/android/tool/x86_64/bin:$PATH ; CC=clang CXX=clang++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --prefix=/opt/android/build/libzmq/x86_64 --host=x86_64-linux-android --enable-static --disable-shared && make && make install && ldconfig && make clean
 
+# zmq.hpp
+ARG CPPZMQ_VERSION=v4.4.1
+ARG CPPZMQ_HASH=f5b36e563598d48fcc0d82e589d3596afef945ae
+RUN set -ex \
+    && cd /opt/android \
+    && git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
+    && cd cppzmq \
+    && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1 \
+    && mv *.hpp /opt/android/build/libzmq/include
+
 # Building Arqma from the latest commit on android branch, this should be kept up to date with master
 # with the necessary fixes by m@lbit, crtlib and m2049r to build for mobile.
 RUN cd /opt/android \
