@@ -95,6 +95,8 @@ That build is from the master branch, which is used for active development and c
 [![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
+[![CodeQL](https://github.com/malbit/arqma/actions/workflows/codeql.yml/badge.svg?branch=service_nodes)](https://github.com/malbit/arqma/actions/workflows/codeql.yml)
+
 ### Dependencies
 
 #### We are strongly suggest to update cmake and boost to the latest available release.
