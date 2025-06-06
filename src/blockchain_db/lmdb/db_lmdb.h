@@ -268,12 +268,12 @@ public:
 
   void add_txpool_tx(const crypto::hash &txid, const cryptonote::blobdata &blob, const txpool_tx_meta_t& meta) override;
   void update_txpool_tx(const crypto::hash &txid, const txpool_tx_meta_t& meta) override;
-  uint64_t get_txpool_tx_count(bool include_unrelayed_txes = true) const override;
-  bool txpool_has_tx(const crypto::hash &txid) const override;
+  uint64_t get_txpool_tx_count(relay_category category = relay_category::broadcasted) const override;
+  bool txpool_has_tx(const crypto::hash &txid, relay_category tx_category) const override;
   void remove_txpool_tx(const crypto::hash& txid) override;
   bool get_txpool_tx_meta(const crypto::hash& txid, txpool_tx_meta_t &meta) const override;
-  bool get_txpool_tx_blob(const crypto::hash& txid, cryptonote::blobdata &bd) const override;
-  cryptonote::blobdata get_txpool_tx_blob(const crypto::hash& txid) const override;
+  bool get_txpool_tx_blob(const crypto::hash& txid, cryptonote::blobdata& bd, relay_category tx_category) const override;
+  cryptonote::blobdata get_txpool_tx_blob(const crypto::hash& txid, relay_category tx_category) const override;
   uint32_t get_blockchain_pruning_seed() const override;
   bool prune_blockchain(uint32_t pruning_seed = 0) override;
   bool update_pruning() override;
@@ -285,7 +285,7 @@ public:
   uint64_t get_alt_block_count() override;
   void drop_alt_blocks() override;
 
-  bool for_all_txpool_txes(std::function<bool(const crypto::hash&, const txpool_tx_meta_t&, const cryptonote::blobdata*)> f, bool include_blob = false, bool include_unrelayed_txes = true) const override;
+  bool for_all_txpool_txes(std::function<bool(const crypto::hash&, const txpool_tx_meta_t&, const cryptonote::blobdata*)> f, bool include_blob = false, relay_category category = relay_category::broadcasted) const override;
 
   bool for_all_key_images(std::function<bool(const crypto::key_image&)>) const override;
   bool for_blocks_range(const uint64_t& h1, const uint64_t& h2, std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)>) const override;

@@ -31,6 +31,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/endian/conversion.hpp>
+#include <boost/uuid/nil_generator.hpp>
 
 #include "string_tools.h"
 using namespace epee;
@@ -858,7 +859,7 @@ namespace cryptonote
     return false;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash)
   {
     tvc = {};
 
@@ -908,7 +909,7 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash)
   {
     if(!check_tx_syntax(tx))
     {
@@ -1083,22 +1084,28 @@ namespace cryptonote
     return ret;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_txs(const std::vector<blobdata>& tx_blobs, std::vector<tx_verification_context>& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_txs(const epee::span<const blobdata> tx_blobs, epee::span<tx_verification_context> tvc, relay_method tx_relay, bool relayed)
   {
     TRY_ENTRY();
-    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
+
+    if (tx_blobs.size() != tvc.size())
+    {
+      MERROR("tx_blobs and tx_verification_context spans must have equal size");
+      return false;
+    }
 
     std::vector<txpool_event> results(tx_blobs.size());
 
-    tvc.resize(tx_blobs.size());
+    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
+
     tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
     tools::threadpool::waiter waiter(tpool);
-    std::vector<blobdata>::const_iterator it = tx_blobs.begin();
+    epee::span<blobdata>::const_iterator it = tx_blobs.begin();
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
       tpool.submit(&waiter, [&, i, it] {
         try
         {
-          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
+          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash);
         }
         catch (const std::exception& e)
         {
@@ -1115,7 +1122,7 @@ namespace cryptonote
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
       if (!results[i].res)
         continue;
-      if(m_mempool.have_tx(results[i].hash))
+      if(m_mempool.have_tx(results[i].hash, relay_category::legacy))
       {
         LOG_PRINT_L2("tx " << results[i].hash << "already have transaction in tx_pool");
         already_have[i] = true;
@@ -1130,7 +1137,7 @@ namespace cryptonote
         tpool.submit(&waiter, [&, i, it] {
           try
           {
-            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
+            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash);
           }
           catch (const std::exception& e)
           {
@@ -1152,7 +1159,7 @@ namespace cryptonote
       tx_info.push_back({&results[i].tx, results[i].hash, tvc[i], results[i].res});
     }
     if (!tx_info.empty())
-      handle_incoming_tx_accumulated_batch(tx_info, keeped_by_block);
+      handle_incoming_tx_accumulated_batch(tx_info, tx_relay == relay_method::block);
 
     bool valid_events = false;
     bool ok = true;
@@ -1163,7 +1170,7 @@ namespace cryptonote
         ok = false;
         continue;
       }
-      if (keeped_by_block)
+      if (tx_relay == relay_method::block)
         get_blockchain_storage().on_new_tx_from_block(results[i].tx);
       if (already_have[i])
         continue;
@@ -1173,7 +1180,7 @@ namespace cryptonote
       // will be ignored when mining, and using that "pruned" weight seems appropriate for
       // keeping the txpool size constrained
       const uint64_t weight = get_transaction_weight(results[i].tx, it->size());
-      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], weight, tvc[i], keeped_by_block, relayed, do_not_relay);
+      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], weight, tvc[i], tx_relay, relayed);
       if(tvc[i].m_verification_failed)
         MERROR_VER("Transaction verification failed: " << results[i].hash);
       else if(tvc[i].m_verification_impossible)
@@ -1195,14 +1202,9 @@ namespace cryptonote
     CATCH_ENTRY_L0("core::handle_incoming_txs()", false);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, relay_method tx_relay, bool relayed)
   {
-    std::vector<blobdata> tx_blobs;
-    tx_blobs.push_back(tx_blob);
-    std::vector<tx_verification_context> tvcv(1);
-    bool r = handle_incoming_txs(tx_blobs, tvcv, keeped_by_block, relayed, do_not_relay);
-    tvc = tvcv[0];
-    return r;
+    return handle_incoming_txs({std::addressof(tx_blob), 1}, {std::addressof(tvc), 1}, tx_relay, relayed);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
@@ -1422,13 +1424,13 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::add_new_tx(transaction& tx, tx_verification_context& tvc, relay_method tx_relay, bool relayed)
   {
     crypto::hash tx_hash = get_transaction_hash(tx);
     blobdata bl;
     t_serializable_object_to_blob(tx, bl);
     size_t tx_weight = get_transaction_weight(tx, bl.size());
-    return add_new_tx(tx, tx_hash, bl, tx_weight, tvc, keeped_by_block, relayed, do_not_relay);
+    return add_new_tx(tx, tx_hash, bl, tx_weight, tvc, tx_relay, relayed);
   }
   //-----------------------------------------------------------------------------------------------
   size_t core::get_blockchain_total_transactions() const
@@ -1436,9 +1438,9 @@ namespace cryptonote
     return m_blockchain_storage.get_total_transactions();
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, relay_method tx_relay, bool relayed)
   {
-    if(m_mempool.have_tx(tx_hash))
+    if(m_mempool.have_tx(tx_hash, relay_category::legacy))
     {
       LOG_PRINT_L2("tx " << tx_hash << "already have transaction in tx_pool");
       return true;
@@ -1451,24 +1453,39 @@ namespace cryptonote
     }
 
     uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
-    return m_mempool.add_tx(tx, tx_hash, blob, tx_weight, tvc, keeped_by_block, relayed, do_not_relay, version);
+    return m_mempool.add_tx(tx, tx_hash, blob, tx_weight, tvc, tx_relay, relayed, version);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::relay_txpool_transactions()
   {
     // we attempt to relay txes that should be relayed, but were not
-    std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
+    std::vector<std::tuple<crypto::hash, cryptonote::blobdata, relay_method>> txs;
     if (m_mempool.get_relayable_transactions(txs) && !txs.empty())
     {
-      cryptonote_connection_context fake_context{};
-      tx_verification_context tvc{};
-      NOTIFY_NEW_TRANSACTIONS::request r;
-      for (auto it = txs.begin(); it != txs.end(); ++it)
+      NOTIFY_NEW_TRANSACTIONS::request public_req{};
+      NOTIFY_NEW_TRANSACTIONS::request private_req{};
+      for (auto& tx : txs)
       {
-        r.txs.push_back(it->second);
+        switch (std::get<2>(tx))
+        {
+          default:
+          case relay_method::none:
+            break;
+          case relay_method::local:
+            private_req.txs.push_back(std::move(std::get<1>(tx)));
+            break;
+          case relay_method::block:
+          case relay_method::flood:
+            public_req.txs.push_back(std::move(std::get<1>(tx)));
+            break;
+        }
       }
-      get_protocol()->relay_transactions(r, fake_context);
-      m_mempool.set_relayed(txs);
+
+      const boost::uuids::uuid source = boost::uuids::nil_uuid();
+      if (!public_req.txs.empty())
+        get_protocol()->relay_transactions(public_req, source, epee::net_utils::zone::public_);
+      if (!private_req.txs.empty())
+        get_protocol()->relay_transactions(private_req, source, epee::net_utils::zone::invalid);
     }
     return true;
   }
@@ -1493,18 +1510,21 @@ namespace cryptonote
     return m_service_node_list.handle_uptime_proof(proof, my_uptime_proof_confirmation);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
+  void core::on_transactions_relayed(const epee::span<const cryptonote::blobdata> tx_blobs, const relay_method tx_relay)
   {
-    std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
-    cryptonote::transaction tx;
-    crypto::hash tx_hash;
-    if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
+    std::vector<crypto::hash> tx_hashes{};
+    tx_hashes.resize(tx_blobs.size());
+
+    cryptonote::transaction tx{};
+    for (std::size_t i = 0; i < tx_blobs.size(); ++i)
     {
-      LOG_ERROR("Failed to parse relayed transaction");
-      return;
+      if (!parse_and_validate_tx_from_blob(tx_blobs[i], tx, tx_hashes[i]))
+      {
+        LOG_ERROR("Failed to parse relayed transaction");
+        return;
+      }
     }
-    txs.push_back(std::make_pair(tx_hash, std::move(tx_blob)));
-    m_mempool.set_relayed(txs);
+    m_mempool.set_relayed(epee::to_span(tx_hashes), tx_relay);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::relay_service_node_votes()
@@ -1585,7 +1605,7 @@ namespace cryptonote
     for (const auto &tx_hash: b.tx_hashes)
     {
       cryptonote::blobdata txblob;
-      CHECK_AND_ASSERT_THROW_MES(pool.get_transaction(tx_hash, txblob), "Transaction not found in pool");
+      CHECK_AND_ASSERT_THROW_MES(pool.get_transaction(tx_hash, txblob, relay_category::all), "Transaction not found in pool");
       bce.txs.push_back(txblob);
     }
     return bce;
@@ -1782,14 +1802,14 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transaction(const crypto::hash &id, cryptonote::blobdata& tx) const
+  bool core::get_pool_transaction(const crypto::hash &id, cryptonote::blobdata& tx, relay_category tx_category) const
   {
-    return m_mempool.get_transaction(id, tx);
+    return m_mempool.get_transaction(id, tx, tx_category);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::pool_has_tx(const crypto::hash &id) const
   {
-    return m_mempool.have_tx(id);
+    return m_mempool.have_tx(id, relay_category::legacy);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_data) const

@@ -36,6 +36,8 @@
 #include <vector>
 #include "net/levin_base.h"
 #include "cryptonote_basic/blobdatatype.h"
+#include "cryptonote_protocol/enums.h"
+#include "cryptonote_protocol/fwd.h"
 #include "net/enums.h"
 #include "net/net_utils_base.h"
 #include "p2p_protocol_defs.h"
@@ -51,7 +53,7 @@ namespace nodetool
   struct i_p2p_endpoint
   {
     virtual bool relay_notify_to_list(int command, epee::levin::message_writer message, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)=0;
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs)=0;
+    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, cryptonote::i_core_events& core, bool pad_txs)=0;
     virtual bool invoke_notify_to_peer(int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context)=0;
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context)=0;
     virtual void request_callback(const epee::net_utils::connection_context_base& context)=0;
@@ -74,7 +76,7 @@ namespace nodetool
     {
       return false;
     }
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs)
+    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, cryptonote::i_core_events& core, const bool pad_txs)
     {
       return epee::net_utils::zone::invalid;
     }

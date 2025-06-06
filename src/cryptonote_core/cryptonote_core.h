@@ -40,7 +40,9 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "cryptonote_basic/fwd.h"
+#include "cryptonote_core/i_core_events.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler_common.h"
+#include "cryptonote_protocol/enums.h"
 #include "storages/portable_storage_template_helper.h"
 #include "common/download.h"
 #include "common/threadpool.h"
@@ -55,6 +57,7 @@
 #include "warnings.h"
 #include "crypto/hash.h"
 #include "rpc/fwd.h"
+#include "span.h"
 
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
@@ -86,7 +89,7 @@ namespace cryptonote
     * limited to, communication among the Blockchain, the transaction pool,
     * any miners, and the network.
     */
-   class core: public i_miner_handler
+   class core final: public i_miner_handler, public i_core_events
    {
    public:
 
@@ -139,7 +142,7 @@ namespace cryptonote
       *
       * @return true if the transaction made it to the transaction pool, otherwise false
       */
-     bool handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, relay_method tx_relay, bool relayed);
 
      /**
       * @brief handles a list of incoming transactions
@@ -155,7 +158,13 @@ namespace cryptonote
       *
       * @return true if the transactions made it to the transaction pool, otherwise false
       */
-     bool handle_incoming_txs(const std::vector<blobdata>& tx_blobs, std::vector<tx_verification_context>& tvc, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool handle_incoming_txs(epee::span<const blobdata> tx_blobs, epee::span<tx_verification_context> tvc, relay_method tx_relay, bool relayed);
+
+     bool handle_incoming_txs(const std::vector<blobdata>& tx_blobs, std::vector<tx_verification_context>& tvc, relay_method tx_relay, bool relayed)
+     {
+       tvc.resize(tx_blobs.size());
+       return handle_incoming_txs(epee::to_span(tx_blobs), epee::to_mut_span(tvc), tx_relay, relayed);
+     }
 
      /**
       * @brief handles an incoming block
@@ -231,7 +240,7 @@ namespace cryptonote
      /**
       * @brief called when a transaction is relayed
       */
-     virtual void on_transaction_relayed(const cryptonote::blobdata& tx);
+     virtual void on_transactions_relayed(epee::span<const cryptonote::blobdata> tx_blobs, relay_method tx_relay) final;
 
      /**
       * @brief gets the miner instance
@@ -434,7 +443,7 @@ namespace cryptonote
       *
       * @note see tx_memory_pool::get_transactions
       */
-     bool get_pool_transactions(std::vector<transaction>& txs, bool include_unrelayed_txes = true) const;
+     bool get_pool_transactions(std::vector<transaction>& txs, bool include_sensitive_txes = false) const;
 
      /**
       * @copydoc tx_memory_pool::get_txpool_backlog
@@ -449,7 +458,7 @@ namespace cryptonote
       *
       * @note see tx_memory_pool::get_transactions
       */
-     bool get_pool_transaction_hashes(std::vector<crypto::hash>& txs, bool include_unrelayed_txes = true) const;
+     bool get_pool_transaction_hashes(std::vector<crypto::hash>& txs, bool include_sensitive_txes = false) const;
 
      /**
       * @copydoc tx_memory_pool::get_transactions
@@ -457,14 +466,14 @@ namespace cryptonote
       *
       * @note see tx_memory_pool::get_transactions
       */
-     bool get_pool_transaction_stats(struct txpool_stats& stats, bool include_unrelayed_txes = true) const;
+     bool get_pool_transaction_stats(struct txpool_stats& stats, bool include_sensitive_txes = false) const;
 
      /**
       * @copydoc tx_memory_pool::get_transaction
       *
       * @note see tx_memory_pool::get_transaction
       */
-     bool get_pool_transaction(const crypto::hash& id, cryptonote::blobdata& tx) const;
+     bool get_pool_transaction(const crypto::hash& id, cryptonote::blobdata& tx, relay_category tx_category) const;
 
      /**
       * @copydoc tx_memory_pool::get_pool_transactions_and_spent_keys_info
@@ -472,7 +481,7 @@ namespace cryptonote
       *
       * @note see tx_memory_pool::get_pool_transactions_and_spent_keys_info
       */
-     bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_unrelayed_txes = true) const;
+     bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_txes = false) const;
 
      /**
       * @copydoc tx_memory_pool::get_pool_for_rpc
@@ -886,7 +895,7 @@ namespace cryptonote
       * @param do_not_relay whether to prevent the transaction from being relayed
       *
       */
-     bool add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, relay_method tx_relay, bool relayed);
 
      /**
       * @brief add a new transaction to the transaction pool
@@ -903,7 +912,7 @@ namespace cryptonote
       * is already in a block on the Blockchain, or is successfully added
       * to the transaction pool
       */
-     bool add_new_tx(transaction& tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool add_new_tx(transaction& tx, tx_verification_context& tvc, relay_method tx_relay, bool relayed);
 
      /**
       * @copydoc Blockchain::add_new_block
@@ -950,8 +959,8 @@ namespace cryptonote
      bool check_tx_semantic(const transaction& tx, bool keeped_by_block) const;
      void set_semantics_failed(const crypto::hash &tx_hash);
 
-     bool handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
-     bool handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash);
+     bool handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash);
      struct tx_verification_batch_info { const cryptonote::transaction *tx; crypto::hash tx_hash; tx_verification_context &tvc; bool &result; };
      bool handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool keeped_by_block);
 
