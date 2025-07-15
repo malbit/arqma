@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(net_sources
+add_library(net
   dandelionpp.cpp
   error.cpp
   i2p_address.cpp
@@ -36,14 +36,8 @@ set(net_sources
   socks_connect.cpp
   tor_address.cpp)
 
-arqma_find_all_headers(net_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_add_library(net
-  ${net_sources}
-  ${net_headers})
-
 target_link_libraries(net
-  PUBLIC
+  PRIVATE
     common
     epee
-    ${Boost_ASIO_LIBRARY})
+    extra)

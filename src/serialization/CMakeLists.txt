@@ -27,27 +27,14 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(serialization_sources
+add_library(serialization
   json_object.cpp)
 
-set(serialization_headers)
-
-arqma_find_all_headers(serialization_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(serialization
-  ${serialization_private_headers})
-arqma_add_library(serialization
-  ${serialization_sources}
-  ${serialization_headers}
-  ${serialization_private_headers})
 target_link_libraries(serialization
   PRIVATE
-    cryptonote_basic
     cryptonote_core
     cryptonote_protocol
-    ${Boost_REGEX_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${EXTRA_LIBRARIES})
-add_dependencies(serialization
-  version)
+    Boost::chrono
+    Boost::thread
+    version
+    extra)

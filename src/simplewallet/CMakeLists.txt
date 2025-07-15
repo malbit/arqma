@@ -27,39 +27,26 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(simplewallet_sources
+arqma_add_executable(simplewallet "arqma-wallet-cli"
   simplewallet.cpp)
 
-set(simplewallet_headers)
-
-arqma_find_all_headers(simplewallet_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(simplewallet
-  ${simplewallet_private_headers})
-arqma_add_executable(simplewallet
-  ${simplewallet_sources}
-  ${simplewallet_headers}
-  ${simplewallet_private_headers})
 target_link_libraries(simplewallet
   PRIVATE
     wallet
+    daemonizer
     rpc_base
     cryptonote_core
-    cncrypto
-    common
     mnemonics
     epee
     qrcodegen
-    version
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_LOCALE_LIBRARY}
-    ${ICU_LIBRARIES}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${GNU_READLINE_LIBRARY}
-    ${EXTRA_LIBRARIES})
-set_property(TARGET simplewallet
-  PROPERTY
-    OUTPUT_NAME "arqma-wallet-cli")
-install(TARGETS simplewallet DESTINATION bin)
+    Boost::chrono
+    Boost::program_options
+    Boost::filesystem
+    Boost::regex
+    icu
+    Boost::thread
+    extra)
+
+if (WIN32)
+  target_link_libaries(simplewallet PRIVATE Boost::locale)
+endif()

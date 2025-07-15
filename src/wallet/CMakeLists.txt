@@ -28,123 +28,83 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-set(wallet_sources
+add_library(wallet
   wallet2.cpp
   wallet_args.cpp
   ringdb.cpp
   node_rpc_proxy.cpp)
 
-arqma_find_all_headers(wallet_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(wallet
-  ${wallet_private_headers})
-arqma_add_library(wallet
-  ${wallet_sources}
-  ${wallet_private_headers})
 target_link_libraries(wallet
   PUBLIC
-    rpc_base
     multisig
-    common
     cryptonote_core
     mnemonics
     net
     lmdb
-    ${Boost_SERIALIZATION_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_REGEX_LIBRARY}
+    Boost::chrono
+    Boost::serialization
+    Boost::filesystem
+    Boost::thread
   PRIVATE
-    ${EXTRA_LIBRARIES})
+    extra)
 
-if(NOT IOS)
-  set(wallet_rpc_sources
-    wallet_rpc_server.cpp)
+arqma_add_executable(wallet_rpc_server "arqma-wallet-rpc"
+  wallet_rpc_server.cpp)
 
-  set(wallet_rpc_headers)
+target_link_libraries(wallet_rpc_server
+  PRIVATE
+    wallet
+    rpc_base
+    daemonizer
+    epee
+    Boost::program_options
+    Boost::regex
+    extra)
 
-  set(wallet_rpc_private_headers
-    wallet_rpc_server.h)
+function(combine_archives output_archive)
+  set(mri_file ${CMAKE_CURRENT_BINARY_DIR}/${output_archive}.mri)
+  set(FULL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/lib${output_archive}.a)
+  set(mri_context "create ${FULL_OUTPUT_PATH}\n")
+  FOREACH(in_archive ${ARGN})
+    string(APPEND mri_content "addlib $<TARGET_FILE:${in_archive}>\n")
+  ENDFOREACH()
+  string(APPEND mri_content "save\nend\n")
+  file(GENERATE OUTPUT ${mri_file} CONTENT "${mri_content}")
 
-  arqma_private_headers(wallet_rpc_server
-    ${wallet_rpc_private_headers})
-  arqma_add_executable(wallet_rpc_server
-    ${wallet_rpc_sources}
-    ${wallet_rpc_headers}
-    ${wallet_rpc_private_headers})
+  set(output_archive_dummy_file ${CMAKE_CURRENT_BINARY_DIR}/${output_archive}.dummy.cpp)
+  add_custom_command(OUTPUT ${output_archive_dummy_file}
+                     COMMAND touch ${output_archive_dummy_file}
+                     DEPENDS ${ARGN})
 
-  target_link_libraries(wallet_rpc_server
-    PRIVATE
-      wallet
-      rpc_base
-      cryptonote_core
-      cncrypto
-      common
-      version
-      daemonizer
-      epee
-      ${Boost_PROGRAM_OPTIONS_LIBRARY}
-      ${Boost_FILESYSTEM_LIBRARY}
-      ${Boost_THREAD_LIBRARY}
-      ${CMAKE_THREAD_LIBS_INIT}
-      ${EXTRA_LIBRARIES})
-  set_property(TARGET wallet_rpc_server
-    PROPERTY
-      OUTPUT_NAME "arqma-wallet-rpc")
-  install(TARGETS wallet_rpc_server DESTINATION bin)
-endif()
-
+  add_library(${output_archive} STATIC ${output_archive_dummy_file})
+  add_custom_command(TARGET ${output_archive} POST_BUILD COMMAND ar -M < ${mri_file})
+endfunction(combine_archives)
 
 # build and install libwallet_merged only if we building for GUI
-if(BUILD_GUI_DEPS)
-  if(NOT IOS)
-    set(libs_to_merge
-            wallet_api
-            wallet
-            multisig
-            blockchain_db
-            cryptonote_core
-            cryptonote_basic
-            mnemonics
-            common
-            cncrypto
-            device
-            ringct
-            ringct_basic
-            checkpoints
-            version
-            net)
-  else()
-    set(libs_to_merge
-            wallet_api
-            wallet
-            multisig
-            blockchain_db
-            cryptonote_core
-            cryptonote_basic
-            mnemonics
-            common
-            cncrypto
-            device
-            ringct
-            ringct_basic
-            checkpoints
-            version
-            net)
-  endif()
+if(BUILD_GUI_DEPS AND STATIC)
+  combine_archives(wallet_merged
+    wallet_api
+    wallet
+    multisig
+    blockchain_db
+    cryptonote_core
+    cryptonote_basic
+    mnemonics
+    common
+    cncrypto
+    device
+    ringct
+    ringct_basic
+    checkpoints
+    version
+    net)
 
-    foreach(lib ${libs_to_merge})
-        list(APPEND objlibs $<TARGET_OBJECTS:obj_${lib}>) # matches naming convention in src/CMakeLists.txt
-    endforeach()
-    add_library(wallet_merged STATIC ${objlibs})
-    if(IOS)
-        set(lib_folder lib-${ARCH})
-    else()
-        set(lib_folder lib)
-    endif()
-    install(TARGETS wallet_merged
-        ARCHIVE DESTINATION ${lib_folder})
+  if(IOS)
+    set(lib_folder lib-${ARCH})
+  else()
+    set(lib_folder lib)
+  endif()
+  install(TARGETS wallet_merged ARCHIVE DESTINATION ${lib_folder})
 endif()
 
 add_subdirectory(api)

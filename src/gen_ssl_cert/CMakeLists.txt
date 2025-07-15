@@ -27,23 +27,16 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(gen_ssl_cert_sources
+arqma_add_executable(gen_ssl_cert "arqma-generate-ssl-certificate"
   gen_ssl_cert.cpp)
 
-arqma_add_executable(gen_ssl_cert
-  ${gen_ssl_cert_sources})
 target_link_libraries(gen_ssl_cert
   PRIVATE
     common
     epee
     version
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
-add_dependencies(gen_ssl_cert
-  version)
-set_property(TARGET gen_ssl_cert
-  PROPERTY
-    OUTPUT_NAME "arqma-generate-ssl-certificate")
-install(TARGETS gen_ssl_cert DESTINATION bin)
+    Boost::program_options
+    Boost::filesystem
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    extra)

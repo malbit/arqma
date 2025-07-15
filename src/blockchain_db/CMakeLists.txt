@@ -27,27 +27,20 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(blockchain_db_sources
+add_library(blockchain_db
   blockchain_db.cpp
   lmdb/db_lmdb.cpp)
 
-set(blockchain_db_headers)
-
-arqma_find_all_headers(blockchain_db_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(blockchain_db
-  ${crypto_private_headers})
-arqma_add_library(blockchain_db
-  ${blockchain_db_sources}
-  ${blockchain_db_headers}
-  ${blockchain_db_private_headers})
 target_link_libraries(blockchain_db
-  PUBLIC
+  PRIVATE
     common
-    cncrypto
     ringct
     lmdb
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
+    Boost::filesystem
+    Boost::thread
+    extra)
+
+target_compile_definitions(blockchain_db
   PRIVATE
-    ${EXTRA_LIBRARIES})
+    "DEFAULT_DB_TYPE=\"${BLOCKCHAIN_DB}\""
+    "BLOCKCHAIN_DB=${BLOCKCHAIN_DB}")

@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(daemon_sources
+arqma_add_executable(daemon "arqmad"
   command_parser_executor.cpp
   command_server.cpp
   daemon.cpp
@@ -35,23 +35,11 @@ set(daemon_sources
   main.cpp
   rpc_command_executor.cpp)
 
-set(daemon_headers)
-
-arqma_find_all_headers(daemon_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(daemon
-  ${daemon_private_headers})
-arqma_add_executable(daemon
-  ${daemon_sources}
-  ${daemon_headers}
-  ${daemon_private_headers})
 target_link_libraries(daemon
   PRIVATE
     rpc
     blockchain_db
     cryptonote_core
-    cncrypto
-    common
     p2p
     cryptonote_protocol
     daemonizer
@@ -59,16 +47,9 @@ target_link_libraries(daemon
     daemon_rpc_server
     epee
     version
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_REGEX_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
+    Boost::chrono
+    Boost::filesystem
+    Boost::program_options
+    Boost::system
     libzmq
-    ${GNU_READLINE_LIBRARY}
-    ${EXTRA_LIBRARIES}
-    blocks)
-set_property(TARGET daemon
-  PROPERTY
-    OUTPUT_NAME "arqmad")
-install(TARGETS daemon DESTINATION bin)
+    extra)

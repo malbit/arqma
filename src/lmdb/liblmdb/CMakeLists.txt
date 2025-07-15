@@ -32,19 +32,16 @@ add_library(lmdb
   mdb.c
   midl.c)
 
-target_include_directories(lmdb PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(lmdb PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-
 if(FREEBSD)
-  add_definitions(-DMDB_DSYNC=O_SYNC)
+  target_compile_definitions(lmdb PRIVATE MDB_DSYNC=O_SYNC)
 endif()
 
 if(ANDROID)
-  add_definitions("-DANDROID=1")
+  target_compile_definitions(lmdb PRIVATE ANDROID=1)
 endif()
 
 if(${ARCH_WIDTH} EQUAL 32)
-  target_compile_definitions(lmdb PUBLIC -DMDB_VL32)
+  target_compile_definitions(lmdb PUBLIC MDB_VL32)
 endif()
 
 if(WIN32)
@@ -55,6 +52,10 @@ if(WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-truncation")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-truncation")
 endif()
+
+target_include_directories(lmdb PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(lmdb PRIVATE Threads::Threads)
+set_property(TARGET lmdb PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # GUI/libwallet install target
 if(BUILD_GUI_DEPS)

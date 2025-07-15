@@ -29,42 +29,28 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-if(WIN32 OR STATIC)
-  add_definitions(-DSTATICLIB)
-  add_definitions(-DMINIUPNP_STATICLIB)
-endif()
-
-function(arqma_private_headers group)
-  source_group("${group}\\Private" FILES ${ARGN})
-endfunction()
-
-function(arqma_install_headers subdir)
-  install(FILES ${ARGN} DESTINATION "include/${subdir}" COMPONENT development)
-endfunction()
-
 function(enable_stack_trace target)
   if(STACK_TRACE)
-    set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "STACK_TRACE")
+    target_compile_definitions("${target}" PRIVATE STACK_TRACE)
     if(STATIC)
       set_property(TARGET "${target}" APPEND PROPERTY LINK_FLAGS "-Wl,--wrap=__cxa_throw")
     endif()
   endif()
 endfunction()
 
-function(arqma_add_executable name)
-  source_group("${name}" FILES ${ARGN})
-  add_executable("${name}" ${ARGN})
-  target_link_libraries("${name}" PRIVATE ${EXTRA_LIBRARIES})
-  set_property(TARGET "${name}" PROPERTY FOLDER "prog")
-  set_property(TARGET "${name}" PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-  enable_stack_trace("${name}")
-
-  arqma_set_target_no_relink("${name}")
-  arqma_set_target_strip("${name}")
+function(arqma_add_executable target binary)
+  add_executable("${target}" ${ARGN})
+  target_link_libraries("${target}" PRIVATE extra)
+  enable_stack_trace("${target}")
+  set_target_properties("${target}" PROPERTIES
+    OUTPUT_NAME "${binary}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+  install(TARGETS "${target}" DESTINATION bin)
 endfunction()
 
 include(Version)
-arqma_add_library(version SOURCES ${CMAKE_BINARY_DIR}/version.cpp DEPENDS genversion)
+add_library(version ${CMAKE_BINARY_DIR}/version.cpp)
+add_dependencies(version genversion)
 
 add_subdirectory(common)
 add_subdirectory(crypto)

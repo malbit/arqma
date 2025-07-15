@@ -27,33 +27,20 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(p2p_sources
+add_library(p2p
   net_node.cpp
   net_node.inl
   net_peerlist.cpp)
 
-set(p2p_headers)
-
-arqma_find_all_headers(p2p_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(p2p
-  ${p2p_private_headers})
-
-arqma_add_library(p2p
-  ${p2p_sources}
-  ${p2p_headers}
-  ${p2p_private_headers})
-
 target_link_libraries(p2p
   PUBLIC
-    version
     cryptonote_core
+  PRIVATE
+    version
     net
     miniupnpc
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_SERIALIZATION_LIBRARY}
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+    Boost::chrono
+    Boost::program_options
+    Boost::filesystem
+    Boost::serialization
+    extra)

@@ -31,31 +31,28 @@ cmake_minimum_required(VERSION 3.18)
 
 project(easylogging CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+add_library(easylogging
+  easylogging++.cc)
 
-set(flags "-fPIC")
+set_property(TARGET easylogging PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET easylogging PROPERTY CXX_STANDARD 17)
+set_property(TARGET easylogging PROPERTY CXX_STANDARD_REQUIRED ON)
 
 find_package(Threads)
 find_package(Backtrace)
 
-add_library(easylogging
-  easylogging++.cc)
+target_include_directories(easylogging PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(easylogging
   PRIVATE
-    ${CMAKE_THREAD_LIBS_INIT}
+    Threads::Threads
     ${Backtrace_LIBRARIES})
 
 # GUI/libwallet install target
 if (BUILD_GUI_DEPS)
     if(IOS)
         set(lib_folder lib-${ARCH})
-        set(flags "${flags} -fno-stack-check")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-check")
+        target_compile_options(easylogging PUBLIC -fno-stack-check)
     else()
         set(lib_folder lib)
     endif()
@@ -63,4 +60,3 @@ if (BUILD_GUI_DEPS)
         ARCHIVE DESTINATION ${lib_folder}
         LIBRARY DESTINATION ${lib_folder})
 endif()
-set_property(TARGET easylogging APPEND PROPERTY COMPILE_FLAGS "${flags}")

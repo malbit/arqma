@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(crypto_sources
+add_library(cncrypto
   aesb.c
   blake256.c
   chacha.c
@@ -49,32 +49,41 @@ set(crypto_sources
   rx-slow-hash.c
   tree-hash.c)
 
-include_directories(${RANDOMARQ_INCLUDE})
-
-set(crypto_headers)
-
-arqma_find_all_headers(crypto_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(cncrypto
-  ${crypto_private_headers})
-arqma_add_library(cncrypto
-  ${crypto_sources}
-  ${crypto_headers}
-  ${crypto_private_headers})
 target_link_libraries(cncrypto
   PUBLIC
     epee
     randomx
-    ${Boost_SYSTEM_LIBRARY}
+    Boost::system
+    Boost::thread
     sodium
   PRIVATE
-    ${EXTRA_LIBRARIES})
+    extra)
 
 # Because of the way Qt works on android with JNI, the code does not live in the main android thread
 # So this code runs with a 1 MB default stack size.
 # This will force the use of the heap for the allocation of the scratchpad
 if (ANDROID OR IOS)
   if( BUILD_GUI_DEPS )
-    add_definitions(-DFORCE_USE_HEAP=1)
+    target_compile_definitions(cncrypto PUBLIC FORCE_USE_HEAD=1)
   endif()
+endif()
+
+option(NO_AES "Explicitly disable AES support" ${NO_AES})
+
+if (NO_AES)
+  statusinfo("AES support explicitly disabled")
+  target_compile_definitions(common PRIVATE NO_AES)
+elseif (NOT ARM AND NOT PPC64LE AND NOT PPC64 AND NOT PPC AND NOT S390X)
+  statusinfo("AES support enabled")
+  target_compile_options(common PRIVATE "-maes")
+elseif (PPC64LE OR PPC64 OR PPC)
+  statusinfo("AES support not available on POWER")
+elseif (S390X)
+  statusinfo("AES support not available on s390x")
+elseif (ARM6)
+  statusinfo("AES support not available on ARMv6")
+elseif (ARM7)
+  statusinfo("AES support not available on ARMv7")
+else()
+  statusinfo("AES support disabled")
 endif()

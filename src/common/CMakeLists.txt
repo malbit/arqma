@@ -29,9 +29,7 @@
 
 ## exp2 + round <-- if somebody would like to do some precise equations near future :)
 
-include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
-
-set(common_sources
+add_library(common
   base58.cpp
   command_line.cpp
   dns_utils.cpp
@@ -55,36 +53,44 @@ set(common_sources
   combinator.cpp)
 
 if (STACK_TRACE)
-  list(APPEND common_sources stack_trace.cpp)
+  target_sources(common PRIVATE stack_trace.cpp)
+  if (WIN32 OR STATIC)
+    target_compile_definitions(common PRIVATE STATICLIB)
+  endif()
 endif()
 
 if (BACKCOMPAT)
-  list(APPEND common_sources compat/glibc_compat.cpp)
+  target_sources(common PRIVATE compat/glibc_compat.cpp)
 endif()
 
-set(common_headers)
+add_dependencies(common generate_translations_header)
 
-arqma_find_all_headers(common_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(common
-  ${common_private_headers})
-arqma_add_library(common
-  ${common_sources}
-  ${common_headers}
-  ${common_private_headers}
-  DEPENDS generate_translations_header)
 target_link_libraries(common
   PUBLIC
     cncrypto
-    libunbound
-    ${LIBUNWIND_LIBRARIES}
-    ${Boost_DATE_TIME_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_REGEX_LIBRARY}
-    ${Boost_CHRONO_LIBRARY}
   PRIVATE
+    libunbound
     epee
-    ${OPENSSL_LIBRARIES}
-    ${EXTRA_LIBRARIES})
+    Boost::regex
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    extra)
+
+target_include_directories(common PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../../translations")
+
+option(STACK_TRACE "Install a hook that dumps stack on exception" OFF)
+
+if (STACK_TRACE)
+  if (APPLE)
+  elseif (DEPENDS AND NOT LINUX)
+  elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT MINGW)
+    target_link_libraries(common PRIVATE easylogging)
+  elseif (ARM AND STATIC)
+  else()
+    find_package(Libunwind)
+    if (LIBUNWIND_FOUND)
+      target_link_libraries(common PRIVATE ${LIBUNWIND_LIBRARIES})
+      target_include_directories(common PRIVATE ${LIBUNWIND_INCLUDE_DIR})
+    endif()
+  endif()
+endif()

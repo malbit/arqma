@@ -29,8 +29,6 @@
 
 set(epee_include_dir "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 
-arqma_find_all_headers(epee_headers_public "${epee_include_dir}")
-
 add_library(epee
   STATIC
     abstract_http_client.cpp
@@ -56,9 +54,7 @@ add_library(epee
     portable_storage.cpp
     string_tools.cpp
     tiny_ini.cpp
-    wipeable_string.cpp
-
-    ${epee_headers_public})
+    wipeable_string.cpp)
 
 if(TARGET readline)
   target_sources(epee PUBLIC readline_buffer.cpp)
@@ -80,14 +76,12 @@ endif()
 target_link_libraries(epee
   PUBLIC
     easylogging
-    ${Boost_CHRONO_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_REGEX_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${OPENSSL_LIBRARIES}
   PRIVATE
-    ${EXTRA_LIBRARIES})
+    Boost::filesystem
+    Boost::thread
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    extra)
 
 target_include_directories(epee
   PUBLIC

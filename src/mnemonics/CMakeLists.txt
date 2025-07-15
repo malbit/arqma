@@ -27,23 +27,11 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(mnemonics_sources
+add_library(mnemonics
   electrum-words.cpp)
 
-set(mnemonics_headers)
-
-arqma_find_all_headers(mnemonics_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(mnemonics
-  ${mnemonics_private_headers})
-arqma_add_library(mnemonics
-  ${mnemonics_sources}
-  ${mnemonics_headers}
-  ${mnemonics_private_headers})
 target_link_libraries(mnemonics
-  PUBLIC
+  PRIVATE
     epee
     easylogging
-    ${Boost_SYSTEM_LIBRARY}
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+    extra)

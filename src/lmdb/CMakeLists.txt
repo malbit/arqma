@@ -27,22 +27,17 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(lmdb_sources
+add_library(lmdb_lib
   database.cpp
   error.cpp
   table.cpp
   value_stream.cpp)
 
-arqma_find_all_headers(lmdb_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_add_library(lmdb_lib
-  ${lmdb_sources}
-  ${lmdb_headers})
-
 target_link_libraries(lmdb_lib
-  common
-  lmdb)
+  PRIVATE
+    common
+    lmdb)
 
-message(STATUS "Using ${ARCH_WIDTH}-bit LMDB from source tree")
+statusinfo("Using ${ARCH_WIDTH}-bit LMDB from source tree")
 add_subdirectory(liblmdb)
 set(LMDB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/liblmdb" CACHE STRING "LMDB Include path")

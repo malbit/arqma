@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(cryptonote_protocol_sources
+add_library(cryptonote_protocol
   block_queue.cpp
   cryptonote_protocol_handler.inl
   arqnet.cpp
@@ -35,21 +35,11 @@ set(cryptonote_protocol_sources
   core_protocol_instantiation.cpp
   p2p_net_node_instantiation.cpp)
 
-set(cryptonote_protocol_headers)
-
-arqma_find_all_headers(cryptonote_protocol_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(cryptonote_protocol
-  ${cryptonote_protocol_private_headers})
-
-arqma_add_library(cryptonote_protocol
-  ${cryptonote_protocol_sources}
-  ${cryptonote_protocol_headers}
-  ${cryptonote_protocol_private_headers})
-
 target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
-    arqnet
   PRIVATE
-    ${EXTRA_LIBRARIES})
+    arqnet
+    miniupnpc
+    easylogging
+    extra)

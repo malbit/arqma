@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(ringct_basic_sources
+add_library(ringct_basic
   rctOps.cpp
   rctTypes.cpp
   rctCryptoOps.c
@@ -35,41 +35,23 @@ set(ringct_basic_sources
   bulletproofs.cc
   bp_legacy.cc)
 
-arqma_find_all_headers(ringct_basic_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
-
-arqma_private_headers(ringct_basic
-  ${crypto_private_headers})
-arqma_add_library(ringct_basic
-  ${ringct_basic_sources}
-  ${ringct_basic_private_headers})
 target_link_libraries(ringct_basic
   PUBLIC
     common
-    cncrypto
   PRIVATE
-    ${OPENSSL_LIBRARIES}
-    ${EXTRA_LIBRARIES})
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    extra)
 
-set(ringct_sources
+add_library(ringct
   rctSigs.cpp)
 
-set(ringct_headers)
-
-set(ringct_private_headers
-  rctSigs.h)
-
-arqma_private_headers(ringct
-  ${crypto_private_headers})
-arqma_add_library(ringct
-  ${ringct_sources}
-  ${ringct_headers}
-  ${ringct_private_headers})
 target_link_libraries(ringct
   PUBLIC
     common
-    cncrypto
     cryptonote_basic
     device
   PRIVATE
-    ${OPENSSL_LIBRARIES}
-    ${EXTRA_LIBRARIES})
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    extra)
