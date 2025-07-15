@@ -37,17 +37,18 @@ if ("$Format:$" STREQUAL "")
   # We're in a tarball; use hard-coded variables.
   write_static_version_header("release")
 elseif (GIT_FOUND OR Git_FOUND)
-  message(STATUS "Found Git: ${GIT_EXECUTABLE}")
+  statusinfo("Found Git: ${GIT_EXECUTABLE}")
+  set(VERSIONTAG "@VERSIONTAG@")
+  configure_file("${CMAKE_SOURCE_DIR}/src/version.cpp.in" "${CMAKE_BINARY_DIR}/version.cpp.in")
   add_custom_command(
     OUTPUT            "${CMAKE_BINARY_DIR}/version.cpp"
     COMMAND           "${CMAKE_COMMAND}"
                       "-D" "GIT=${GIT_EXECUTABLE}"
-                      "-D" "TO=${CMAKE_BINARY_DIR}/version.cpp"
-                      "-P" "cmake/GenVersion.cmake"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    DEPENDS           "${CMAKE_SOURCE_DIR}/src/version.cpp.in")
+                      "-P" "${CMAKE_SOURCE_DIR}/cmake/GenVersion.cmake"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    DEPENDS           "${CMAKE_BINARY_DIR}/version.cpp.in")
 else()
-  message(STATUS "WARNING: Git was not found!")
+  warn("Git was not found. Setting release tag to 'unknown'")
   write_static_version_header("unknown")
 endif ()
 add_custom_target(genversion ALL

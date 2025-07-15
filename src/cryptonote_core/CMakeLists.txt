@@ -52,14 +52,8 @@ target_link_libraries(cryptonote_core
   PRIVATE
     Boost::program_options
     Boost::chrono
+    systemd
     extra)
-
-pkg_check_modules(SYSTEMD libsystemd)
-
-if (SYSTEMD_FOUND)
-  target_compile_definitions(cryptonote_core PRIVATE ENABLE_SYSTEMD)
-  target_link_libraries(cryptonote_core PRIVATE ${SYSTEMD_LIBRARIES})
-endif()
 
 if (PER_BLOCK_CHECKPOINT)
   target_compile_definitions(cryptonote_core PUBLIC PER_BLOCK_CHECKPOINT)

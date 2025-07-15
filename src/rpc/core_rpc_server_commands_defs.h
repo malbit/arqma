@@ -2023,13 +2023,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     {
       std::string status;
       uint32_t version;
-      bool release;
       bool untrusted;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(version)
-        KV_SERIALIZE(release)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };

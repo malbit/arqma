@@ -96,7 +96,9 @@ cmake_minimum_required(VERSION 3.18...3.31)
 statusinfo("CMake version ${CMAKE_VERSION}")
 
 project(arqma
+  VERSION 8.0.0
   LANGUAGES CXX C)
+set(ARQMA_RELEASE_CODENAME "Cipherstorm Vault")
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -144,6 +146,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERS
 endif()
 
 enable_language(C ASM)
+
+if (POLICY CMP0079)
+  cmake_policy(SET CMP0079 NEW)
+endif()
 
 function (add_c_flag_if_supported flag var)
   string(REPLACE "-" "_" supported ${flag}_c)
@@ -346,8 +352,7 @@ option(PER_BLOCK_CHECKPOINT "Enables per-block checkpointing" ON)
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 
-statusinfo("BOOST_IGNORE_SYSTEM_PATHS defaults to ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT}")
-option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT})
+option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 enable_testing()
@@ -547,14 +552,11 @@ ExternalProject_Add(generate_translations_header
   CMAKE_ARGS -DLRELEASE_PATH=${LRELEASE_PATH}
   INSTALL_COMMAND ${CMAKE_COMMAND} -E echo "")
 
-if(POLICY CMP0079)
-  cmake_policy(SET CMP0079 NEW)
-endif()
-
 add_library(libzmq INTERFACE)
 add_library(libunbound INTERFACE)
 add_library(miniupnpc INTERFACE)
 add_library(sodium INTERFACE)
+add_library(systemd INTERFACE)
 
 if(NOT SODIUM_LIBRARIES)
   find_package(PkgConfig REQUIRED)
@@ -563,6 +565,18 @@ endif()
 find_library(sodium_link_libs NAMES ${SODIUM_LIBRARIES} PATHS ${SODIUM_LIBRARY_DIRS})
 target_link_libraries(sodium INTERFACE ${sodium_link_libs})
 target_include_directories(sodium INTERFACE ${SODIUM_INCLUDE_DIRS})
+
+option(WITH_SYSTEMD "Attempts to link against and enable systemd daemon notification support" ON)
+if (WITH_SYSTEMD)
+  pkg_check_modules(SYSTEMD libsystemd IMPORTED_TARGET)
+
+  if (SYSTEMD_FOUND)
+    target_compile_definitions(systemd INTERFACE ENABLE_SYSTEMD)
+    target_link_libraries(systemd INTERFACE PkgConfig::SYSTEMD)
+  else()
+    warn("systemd not found. building without systemd support (use -DWITH_SYSTEMD=OFF to suppress this warning)")
+  endif()
+endif()
 
 add_subdirectory(external)
 
@@ -643,11 +657,6 @@ else()
   set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
 
   arqma_enable_coverage()
-  # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
-  # is fixed in the code (Issue #847), force compiler to be conservative.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-
   # if those don't work for your compiler, single it out where appropriate
   if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(C_SECURITY_FLAGS "${C_SECURITY_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1")
@@ -682,7 +691,7 @@ else()
     add_cxx_flag_if_supported(-fstack-clash-protection CXX_SECURITY_FLAGS)
   endif()
 
-  if(NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
+  if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1)
     add_c_flag_if_supported(-mmitigate-rop C_SECURITY_FLAGS)
     add_cxx_flag_if_supported(-mmitigate-rop CXX_SECURITY_FLAGS)
   endif()
@@ -749,11 +758,6 @@ else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${C_WARNINGS} ${PIC_FLAG} ${C_SECURITY_FLAGS} ${LINKER_OPTIONS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS} ${LINKER_OPTIONS} ${CMAKE_EXE_LINKER_OPTIONS_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
-
-  # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
-  # is fixed in the code (Issue #847), force compiler to be conservative.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
 
   if(ARM)
     statusinfo("Setting FPU Flags for ARM Processors")
@@ -836,7 +840,7 @@ else()
 
   endif(ARM)
 
-  if(NOT SANITIZE AND ANDROID AND NOT BUILD_GUI_DEPS STREQUAL "ON" OR IOS)
+  if(ANDROID OR IOS)
     # From Android 5: "only position independent executables (PIE) are supported"
     statusinfo("Enabling PIE executable")
     set(PIC_FLAG "")
@@ -941,6 +945,10 @@ add_library(extra INTERFACE)
 target_link_libraries(extra INTERFACE ${CMAKE_DL_LIBS})
 target_link_libraries(extra INTERFACE Boost::boost)
 target_link_libraries(extra INTERFACE Threads::Threads)
+
+if (APPLE AND BUILD_SHARED_LIBS)
+  target_link_libraries(extra INTERFACE "-undefined dynamic_lookup")
+endif()
 
 add_library(icu INTERFACE)
 
@@ -1049,10 +1057,3 @@ if(BUILD_DOCUMENTATION)
       COMMENT "Generating API documentation with Doxygen.." VERBATIM)
   endif()
 endif()
-
-# when ON - will install libwallet_merged into "lib"
-option(BUILD_GUI_DEPS "Build GUI dependencies." OFF)
-
-# This is not nice, distribution packagers should not enable this, but depend
-# on libunbound shipped with their distribution instead
-option(INSTALL_VENDORED_LIBUNBOUND "Install libunbound binary built from source vendored with this repo." OFF)
