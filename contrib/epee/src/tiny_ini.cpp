@@ -25,6 +25,7 @@
 // 
 
 #include "string_tools.h"
+#include <windows.h>
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
