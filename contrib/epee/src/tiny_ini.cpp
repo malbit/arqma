@@ -27,6 +27,10 @@
 #include "string_tools.h"
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
 
 namespace epee
 {

@@ -48,5 +48,5 @@ target_link_libraries(simplewallet
     extra)
 
 if (WIN32)
-  target_link_libaries(simplewallet PRIVATE Boost::locale)
+  target_link_libraries(simplewallet PRIVATE Boost::locale)
 endif()

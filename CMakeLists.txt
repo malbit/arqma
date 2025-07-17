@@ -584,6 +584,8 @@ add_subdirectory(external)
 target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
+include_directories(${UNBOUND_INCLUDE_DIRS})
+
 target_compile_definitions(easylogging PRIVATE AUTO_INITIALIZE_EASYLOGGINGPP)
 
 if(MSVC)
