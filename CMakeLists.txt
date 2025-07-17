@@ -558,8 +558,9 @@ add_library(miniupnpc INTERFACE)
 add_library(sodium INTERFACE)
 add_library(systemd INTERFACE)
 
+find_package(PkgConfig REQUIRED)
+
 if(NOT SODIUM_LIBRARIES)
-  find_package(PkgConfig REQUIRED)
   pkg_check_modules(SODIUM libsodium>=1.0.18 REQUIRED IMPORTED_TARGET)
 endif()
 find_library(sodium_link_libs NAMES ${SODIUM_LIBRARIES} PATHS ${SODIUM_LIBRARY_DIRS})
