@@ -12,7 +12,7 @@ env:
         ccache --set-config=compression=true
 jobs:
   build-macos:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       CCACHE_TEMPDIR: /tmp/.ccache-temp
     strategy:
@@ -83,16 +83,3 @@ jobs:
       with:
         name: ${{ matrix.toolchain.name }}
         path: distfiles/${{ matrix.toolchain.name }}
-
-#Upload artifacts
-    - name: Copy files via ssh
-      uses: appleboy/scp-action@v0.1.7
-      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' || matrix.toolchain.host == 'aarch64-linux-gnu-RPi' }}
-      with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
-#          source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
-          source: distfiles
-          target: downloads/CLI
