@@ -64,6 +64,13 @@ jobs:
         sudo apt update
         sudo apt -y install build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache ${{ matrix.toolchain.packages }}
 
+    - name: Fix libtinfo5 for clang in depends (symlink hack)
+      run: |
+        # Fix for libtinfo5 missing on Ubuntu 22.04+ (used by clang in depends toolchain)
+        if [ ! -f /usr/lib/x86_64-linux-gnu/libtinfo.so.5 ] && [ -f /lib/x86_64-linux-gnu/libtinfo.so.6 ]; then
+          sudo ln -s /lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+        fi
+
     - name: ccache config
       run: |
         ccache --max-size=150M
