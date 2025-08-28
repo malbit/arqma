@@ -54,7 +54,6 @@
 #endif
 
 #include <boost/filesystem.hpp>
-#include <thread>
 
 using namespace std;
 using namespace cryptonote;
@@ -375,29 +374,7 @@ WalletImpl::WalletImpl(NetworkType nettype, uint64_t kdf_rounds)
 
     m_refreshIntervalMillis = DEFAULT_REFRESH_INTERVAL_MILLIS;
 
-    m_refreshThread = std::thread([this] () { this->refreshThreadFunc(); });
-
-    m_longPollThread = std::thread([this]() {
-      for(;;)
-      {
-        if (!m_refreshEnabled)
-        {
-          std::this_thread::sleep_for(std::chrono::seconds(10));
-          continue;
-        }
-
-        try
-        {
-          if (m_wallet->long_poll_pool_state())
-            m_refreshCV.notify_one();
-        }
-        catch (...)
-        {
-
-        }
-      }
-    });
-
+    m_refreshThread = boost::thread([this] () { this->refreshThreadFunc(); });
 }
 
 WalletImpl::~WalletImpl()

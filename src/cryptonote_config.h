@@ -175,7 +175,9 @@
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
-#define THREAD_STACK_SIZE                               10 * 1024 * 1024
+#define THREAD_STACK_SIZE                               0xA00000
+//#undef PTHREAD_STACK_MIN
+//#define PTHREAD_STACK_MIN                               131072
 
 #define HF_VERSION_MIN_MIXIN_10                         13
 
@@ -194,7 +196,7 @@
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  1024         // the smaller, the smoother the increase
 #define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED

@@ -79,8 +79,8 @@ namespace epee
   using critical_section = std::recursive_mutex;
 
 #define  CRITICAL_REGION_LOCAL(x) std::unique_lock critical_region_var(x)
-#define  CRITICAL_REGION_BEGIN(x) { std::this_thread::sleep_for(std::chrono::milliseconds(epee::debug::g_test_dbg_lock_sleep())); std::unique_lock critical_region_var(x)
-#define  CRITICAL_REGION_LOCAL1(x) { std::this_thread::sleep_for(std::chrono::milliseconds(epee::debug::g_test_dbg_lock_sleep())); } std::unique_lock critical_region_var1(x)
+#define  CRITICAL_REGION_BEGIN(x) { boost::this_thread::sleep_for(boost::chrono::milliseconds(epee::debug::g_test_dbg_lock_sleep())); std::unique_lock critical_region_var(x)
+#define  CRITICAL_REGION_LOCAL1(x) { boost::this_thread::sleep_for(boost::chrono::milliseconds(epee::debug::g_test_dbg_lock_sleep())); } std::unique_lock critical_region_var1(x)
 
 #define  CRITICAL_REGION_END() }
 

@@ -82,6 +82,7 @@ using namespace epee;
   #include <sys/utsname.h>
   #include <sys/stat.h>
 #endif
+#include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
@@ -871,14 +872,14 @@ if(not f.is_open())
   namespace
   {
     std::mutex max_concurrency_lock;
-    unsigned max_concurrency = std::thread::hardware_concurrency();
+    unsigned max_concurrency = boost::thread::hardware_concurrency();
   }
 
   void set_max_concurrency(unsigned n)
   {
     if (n < 1)
-      n = std::thread::hardware_concurrency();
-    unsigned hwc = std::thread::hardware_concurrency();
+      n = boost::thread::hardware_concurrency();
+    unsigned hwc = boost::thread::hardware_concurrency();
     if (n > hwc)
       n = hwc;
     std::lock_guard lock{max_concurrency_lock};

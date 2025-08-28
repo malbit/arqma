@@ -27,7 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
-#include <thread>
+#include <boost/thread/thread.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/cerrno.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -525,7 +525,7 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
     // should poll_one(), can't run_one() because it can block if there is
     // another worker thread executing io_service's tasks
     // TODO: once we get Boost 1.66+, replace with run_one_for/run_until
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(30));
     io_service.poll_one();
   }
 

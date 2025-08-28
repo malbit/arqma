@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <memory>
 #include <functional>
-#include <thread>
+#include <boost/thread/thread.hpp>
 #include <mutex>
 #include <iostream>
 #include <chrono>
@@ -95,7 +95,7 @@ private:
 
     /// The thread in which most of the intermediate work happens (handling external connections
     /// and proxying requests between them to worker threads)
-    std::thread proxy_thread;
+    boost::thread proxy_thread;
 
     /// Called to obtain a "command" socket that attaches to `control` to send commands to the
     /// proxy thread from other threads.  This socket is unique per thread and SNNetwork instance.
@@ -176,7 +176,7 @@ private:
     void spawn_worker(std::string worker_id);
 
     /// Worker threads (ZMQ id -> thread)
-    std::unordered_map<std::string, std::thread> worker_threads;
+    std::unordered_map<std::string, boost::thread> worker_threads;
 
     /// ZMQ ids of idle, active workers
     std::list<std::string> idle_workers;
@@ -264,7 +264,7 @@ public:
      * to send output to, or nullptr to suppress output.  Optional; if omitted the default returns
      * std::cerr for WARN and higher.
      * @param max_workers the maximum number of simultaneous worker threads to start.  Defaults to
-     * std::thread::hardware_concurrency().  Note that threads are only started on demand (i.e. when
+     * boost::thread::hardware_concurrency().  Note that threads are only started on demand (i.e. when
      * a request arrives when all existing threads are busy handling requests).
      */
     SNNetwork(std::string pubkey, std::string privkey,
@@ -273,7 +273,7 @@ public:
             AllowFunc allow_connection,
             WantLog want_log = [](LogLevel l) { return l >= LogLevel::warn; },
             WriteLog logger = [](LogLevel, const char *f, int line, std::string msg) { std::cerr << f << ':' << line << ": " << msg << std::endl; },
-            unsigned int max_workers = std::thread::hardware_concurrency());
+            unsigned int max_workers = boost::thread::hardware_concurrency());
 
     /** Constructs a SNNetwork that does not listen but can be used for connecting to remote
      * listening service nodes, for example to submit blink transactions to service nodes.  It
@@ -284,7 +284,7 @@ public:
             AllowFunc allow_connection,
             WantLog want_log = [](LogLevel l) { return l >= LogLevel::warn; },
             WriteLog logger = [](LogLevel, const char *f, int line, std::string msg) { std::cerr << f << ':' << line << ": " << msg << std::endl; },
-            unsigned int max_workers = std::thread::hardware_concurrency());
+            unsigned int max_workers = boost::thread::hardware_concurrency());
 
     /**
      * Destructor; instructs the proxy to quit.  The proxy tells all workers to quit, waits for them

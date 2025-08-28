@@ -366,7 +366,7 @@ namespace net_utils
 				long int ms = (long int)(delay * 100);
 				if (ms > 0) {
 					reset_timer(std::chrono::milliseconds(ms + 1), true);
-					std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+					boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
 				}
 			} while(delay > 0);
 		} // any form of sleeping
@@ -635,7 +635,7 @@ namespace net_utils
         long int ms = 250 + (rng() % 50);
         MDEBUG("Sleeping because QUEUE is FULL, in " << __FUNCTION__ << " for " << ms << " ms before packet_size="<<chunk.size()); // XXX debug sleep
         m_send_que_lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
         m_send_que_lock.lock();
         _dbg1("sleep for queue: " << ms);
 	if (m_was_shutdown)
@@ -1139,7 +1139,7 @@ namespace net_utils
   {
     TRY_ENTRY();
     m_threads_count = threads_count;
-    m_main_thread_id = std::this_thread::get_id();
+    m_main_thread_id = boost::this_thread::get_id();
     MLOG_SET_THREAD_NAME("[SRV_MAIN]");
     while(!m_stop_signal_sent)
     {
@@ -1191,9 +1191,9 @@ namespace net_utils
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_threads_lock);
     for (auto &th : m_threads)
-      if (th.get_id() == std::this_thread::get_id())
+      if (th.get_id() == boost::this_thread::get_id())
         return true;
-    if(m_threads_count == 1 && std::this_thread::get_id() == m_main_thread_id)
+    if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
       return true;
     return false;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::is_thread_worker", false);

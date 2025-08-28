@@ -337,7 +337,7 @@ void SNNetwork::launch_proxy_thread(const std::vector<std::string> &bind)
         // We bind here so that the `get_control_socket()` below is always connecting to a bound
         // socket, but then proxy thread is responsible for the `command` socket.
         command.bind(SN_ADDR_COMMAND);
-        proxy_thread = std::thread{&SNNetwork::proxy_loop, this, bind};
+        proxy_thread = boost::thread{&SNNetwork::proxy_loop, this, bind};
 
         SN_LOG(debug, "Waiting for proxy thread to get ready...");
         auto &control = get_control_socket();

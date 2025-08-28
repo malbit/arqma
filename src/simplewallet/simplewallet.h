@@ -388,7 +388,7 @@ namespace cryptonote
     refresh_progress_reporter_t m_refresh_progress_reporter;
 
     std::atomic<bool> m_idle_run;
-    std::thread m_idle_thread;
+    boost::thread m_idle_thread;
     std::mutex m_idle_mutex;
     std::condition_variable m_idle_cond;
 

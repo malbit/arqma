@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional/optional.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <atomic>
 #include <functional>
@@ -735,7 +736,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::run()
   {
     // creating thread to log number of connections
-    mPeersLoggerThread.emplace([&]()
+    mPeersLoggerThread.reset(new boost::thread([&]()
     {
       _note("Thread monitor number of peers - start");
       const network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -762,10 +763,10 @@ namespace nodetool
           zone.second.m_current_number_of_in_peers = number_of_in_peers;
           zone.second.m_current_number_of_out_peers = number_of_out_peers;
         }
-        std::this_thread::sleep_for(1s);
+        boost::this_thread::sleep_for(boost::chrono::seconds(1));
       } // main loop of thread
       _note("Thread monitor number of peers - done");
-    }); // lambda
+    })); // lambda
 
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
     public_zone.m_net_server.add_idle_handler([this] { return idle_worker(); }, 1s);
