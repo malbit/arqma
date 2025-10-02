@@ -55,6 +55,14 @@ namespace net_utils
 			std::vector<std::string> m_access_control_origins;
 			boost::optional<login> m_user;
 			critical_section m_lock;
+
+			template<typename T>
+			static bool after_init_connection(const std::shared_ptr<T>& self)
+			{
+			  if (!self)
+			    return false;
+			  return self->m_protocol_handler.after_init_connection();
+			}
 		};
 
 		/************************************************************************/
@@ -154,8 +162,8 @@ namespace net_utils
 			virtual bool handle_http_request(const http_request_info& query_info,
 																						 http_response_info& response,
 																						 t_connection_context& m_conn_context) = 0;
-			virtual bool init_server_thread(){return true;}
-			virtual bool deinit_server_thread(){return true;}
+			virtual bool init_server_thread() { return true; }
+			virtual bool deinit_server_thread() { return true; }
 		};
 
 		template<class t_connection_context>
@@ -211,9 +219,10 @@ namespace net_utils
 			}
 			void handle_qued_callback()
 			{}
+
 			bool after_init_connection()
 			{
-				return true;
+			  return true;
 			}
 
 		private:

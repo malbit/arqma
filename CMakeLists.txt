@@ -454,6 +454,8 @@ add_definitions("-DBLOCKCHAIN_DB=${BLOCKCHAIN_DB}")
 # Can't install hook in static build on OSX, because OSX linker does not support --wrap
 # On ARM, having libunwind package (with .so's only) installed breaks static link.
 # When possible, avoid stack tracing using libunwind in favor of using easylogging++.
+set(FORCE_UNWIND ON)
+
 if(APPLE)
   set(DEFAULT_STACK_TRACE OFF)
   set(LIBUNWIND_LIBRARIES "")
@@ -462,8 +464,14 @@ elseif(DEPENDS AND NOT LINUX)
   set(LIBUNWIND_LIBRARIES "")
 elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT MINGW)
   set(DEFAULT_STACK_TRACE ON)
-  set(STACK_TRACE_LIB "easylogging++") # for diag output only
-  set(LIBUNWIND_LIBRARIES "")
+  if(FORCE_UNWIND)
+    find_package(Libunwind)
+    set(STACK_TRACE_LIB "libunwind")
+    add_definitions("-DFORCE_UNWIND")
+  else()
+    set(STACK_TRACE_LIB "easylogging++") # for diag output only
+    set(LIBUNWIND_LIBRARIES "")
+  endif()
 elseif(ARM)
   set(DEFAULT_STACK_TRACE OFF)
   set(LIBUNWIND_LIBRARIES "")
@@ -481,7 +489,7 @@ endif()
 option(STACK_TRACE "Install a hook that dumps stack on exception" ${DEFAULT_STACK_TRACE})
 
 if(STACK_TRACE)
-  statusinfo("Stack trace on exception enabled (using ${STACK_TRACE_LIB})")
+  statusinfo("Stack trace on exception enabled (using ${STACK_TRACE_LIB}) from : ${LIBUNWIND_LIBRARIES}")
 else()
   statusinfo("Stack trace on exception disabled")
 endif()
@@ -723,7 +731,7 @@ if(ARM7)
   set(WARNINGS "${WARNINGS} -Wno-psabi -Wno-maybe-uninitialized")
 endif()
 set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
-set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
+set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers -Wno-range-loop-construct")
 
 arqma_enable_coverage()
 # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
