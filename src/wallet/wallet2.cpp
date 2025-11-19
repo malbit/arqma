@@ -8706,7 +8706,7 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
 
   //prepare inputs
   LOG_PRINT_L2("preparing outputs");
-  [[maybe_unused]] size_t i = 0;
+  size_t i = 0;
   size_t out_index = 0;
   std::vector<cryptonote::tx_source_entry> sources;
   std::unordered_set<rct::key> used_L;
@@ -9116,7 +9116,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   std::vector<std::pair<uint32_t, std::vector<size_t>>> unused_dust_indices_per_subaddr;
   uint64_t needed_money;
   uint64_t accumulated_fee;
-  [[maybe_unused]] uint64_t accumulated_outputs;
+  uint64_t accumulated_outputs;
   uint64_t accumulated_change;
   struct TX {
     std::vector<size_t> selected_transfers;

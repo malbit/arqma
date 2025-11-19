@@ -295,7 +295,7 @@ private:
         if (my_position[i] < half)
         {
           if (add_peer(prev_validators[half + my_position[i]]))
-            MTRACE("Inter-quorum relay from Q' to Q service node " << prev_validators[my_position[i] - half]);
+            MTRACE("Inter-quorum relay from Q' to Q service node " << prev_validators[half + my_position[i]]);
         }
         else
         {
