@@ -177,7 +177,7 @@ namespace cryptonote
   , "Run a program for each new block, '%s' will be replaced by the block hash"
   , ""
   };
-  static const command_line::arg_descriptor<bool> arg_prune_blockchain = {
+  [[maybe_unused]] static const command_line::arg_descriptor<bool> arg_prune_blockchain = {
     "prune-blockchain"
   , "Prune Blockchain"
   , false
@@ -1143,7 +1143,7 @@ namespace cryptonote
   {
     uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
     bool ok = true;
-    tx_pool_options tx_opts;
+    [[maybe_unused]] tx_pool_options tx_opts;
     for (size_t i = 0; i < parsed_txs.size(); i++)
     {
       auto &info = parsed_txs[i];

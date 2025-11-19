@@ -263,7 +263,7 @@ namespace cryptonote
 
     BlockchainDB &db;
 
-    time_t forked_time;
+    [[maybe_unused]] time_t forked_time;
     uint64_t window_size;
     uint8_t default_threshold_percent;
 

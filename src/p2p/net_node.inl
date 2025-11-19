@@ -1821,7 +1821,8 @@ namespace nodetool
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
       return true;
 
-    unsigned good = 0, bad = 0;
+    unsigned good = 0;
+    [[maybe_unused]] unsigned bad = 0;
     for (const auto& record : records)
     {
       std::vector<std::string> ips;
