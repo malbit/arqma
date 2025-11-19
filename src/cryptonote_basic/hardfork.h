@@ -263,7 +263,10 @@ namespace cryptonote
 
     BlockchainDB &db;
 
-    [[maybe_unused]] time_t forked_time;
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
+    [[maybe_unused]]
+#endif
+    time_t forked_time;
     uint64_t window_size;
     uint8_t default_threshold_percent;
 

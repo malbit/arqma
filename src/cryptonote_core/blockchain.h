@@ -55,6 +55,7 @@
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "common/powerof.h"
 #include "common/util.h"
+#include <thread>
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "cryptonote_basic/difficulty.h"
