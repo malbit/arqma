@@ -460,37 +460,11 @@ bool is_ssl(std::string_view data)
     << (unsigned)(unsigned char)data[4] << " " << (unsigned)(unsigned char)data[5] << " "
     << (unsigned)(unsigned char)data[6] << " " << (unsigned)(unsigned char)data[7] << " "
     << (unsigned)(unsigned char)data[8]);
-  
-  // TLS Record Header: Content Type (1 byte) + Version (2 bytes) + Length (2 bytes) = 5 bytes
-  // TLS Handshake Header: Type (1 byte) + Length (3 bytes) = 4 bytes
-  // Total: 9 bytes minimum
-  
-  // Check Content Type (0x16 = Handshake)
-  if (data[0] != 0x16)
-    return false;
-  
-  // Check major version (must be 3 for TLS/SSL)
-  if (data[1] != 3)
-    return false;
-  
-  // Check if this is a ClientHello (handshake type 0x01)
-  // data[5] is the handshake type (after 5-byte record header)
-  if (data[5] != 1)
-    return false;
-  
-  // Length validation:
-  // Record length (data[3]*256 + data[4]) should equal handshake length (data[7]*256 + data[8]) + 4
-  // The +4 accounts for the handshake header (1 byte type + 3 bytes length)
-  const uint16_t record_len = static_cast<uint16_t>(data[3]) * 256 + static_cast<uint16_t>(data[4]);
-  const uint16_t handshake_len = static_cast<uint16_t>(data[7]) * 256 + static_cast<uint16_t>(data[8]);
-  
-  // data[6] should be 0 for handshake lengths < 65536
-  if (data[6] != 0)
-    return false;
-  
-  if (record_len == handshake_len + 4)
+  if (data[0] == 0x16) // record
+  if (data[1] == 3) // major version
+  if (data[5] == 1) // ClientHello
+  if (data[6] == 0 && data[3]*256 + data[4] == data[7]*256 + data[8] + 4) // length check
     return true;
-  
   return false;
 }
 
