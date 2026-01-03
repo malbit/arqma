@@ -360,14 +360,7 @@ boost::asio::ssl::context ssl_options_t::create_context() const
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1);
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1_1);
 
-  // set cipher suites for TLS 1.3 (if needed in future, SSL_CTX_set_cipher_list works for TLS 1.2)
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-  if (SSL_CTX_set_ciphersuites(ssl_context.native_handle(), "TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256") == 0)
-  {
-    MERROR("Failed to set TLS 1.3 cipher suites");
-  }
-#endif
-  // Keep cipher_list for compatibility (TLS 1.2 fallback if needed)
+  // Set cipher list for TLS 1.2 (SSL_CTX_set_cipher_list works for TLS 1.2)
   SSL_CTX_set_cipher_list(ssl_context.native_handle(), "EECDH+CHACHA20:EECDH+AES");
 
   // set options on the SSL context for added security
