@@ -103,8 +103,8 @@ using namespace cryptonote;
 // used to target a given block weight (additional outputs may be added on top to build fee)
 #define TX_WEIGHT_TARGET(bytes) (bytes*2/3)
 
-#define UNSIGNED_TX_PREFIX "ArQmA unsigned tx set\004"
-#define SIGNED_TX_PREFIX "ArQmA signed tx set\004"
+#define UNSIGNED_TX_PREFIX "ArQmA unsigned tx set\005"
+#define SIGNED_TX_PREFIX "ArQmA signed tx set\005"
 #define MULTISIG_UNSIGNED_TX_PREFIX "ArQmA multisig unsigned tx set\001"
 
 #define RECENT_OUTPUT_RATIO (0.50) // 50% of outputs are from the recent zone
@@ -1072,7 +1072,8 @@ wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended, std
   m_last_block_reward(0),
   m_unattended(unattended),
   m_offline(false),
-  m_export_format(ExportFormat::Binary)
+  m_export_format(ExportFormat::Binary),
+  m_load_deprecated_formats(false)
 {
 }
 
@@ -3569,6 +3570,9 @@ boost::optional<wallet2::keys_file_data> wallet2::get_keys_file_data(const epee:
   value2.SetInt(m_export_format);
   json.AddMember("export_format", value2, json.GetAllocator());
 
+  value2.SetInt(m_load_deprecated_formats);
+  json.AddMember("load_deprecated_formats", value2, json.GetAllocator());
+
   value2.SetUint(1);
   json.AddMember("encrypted_secret_keys", value2, json.GetAllocator());
 
@@ -3714,6 +3718,7 @@ bool wallet2::load_keys_buf(const std::string& keys_buf, const epee::wipeable_st
     m_subaddress_lookahead_major = SUBADDRESS_LOOKAHEAD_MAJOR;
     m_subaddress_lookahead_minor = SUBADDRESS_LOOKAHEAD_MINOR;
     m_export_format = ExportFormat::Binary;
+    m_load_deprecated_formats = false;
     m_device_name = "";
     m_key_device_type = hw::device::device_type::SOFTWARE;
     encrypted_secret_keys = false;
@@ -3868,6 +3873,9 @@ bool wallet2::load_keys_buf(const std::string& keys_buf, const epee::wipeable_st
 
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, export_format, ExportFormat, Int, false, Binary);
     m_export_format = field_export_format;
+
+    GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, load_deprecated_formats, int, Int, false, false);
+    m_load_deprecated_formats = field_load_deprecated_formats;
 
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, device_name, std::string, String, false, std::string());
     if (m_device_name.empty() && field_device_name_found)
@@ -5102,10 +5110,35 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
       crypto::chacha20(cache_file_data.cache_data.data(), cache_file_data.cache_data.size(), m_cache_key, cache_file_data.iv, &cache_data[0]);
 
       try {
-        std::stringstream iss;
-        iss << cache_data;
-        boost::archive::portable_binary_iarchive ar(iss);
-        ar >> *this;
+        bool loaded = false;
+
+        try {
+          std::stringstream iss;
+          iss << cache_data;
+          binary_archive<false> ar(iss);
+          if (::serialization::serialize(ar, *this))
+            if (::serialization::check_stream_state(ar))
+              loaded = true;
+          if (!loaded)
+          {
+            std::stringstream iss;
+            iss << cache_data;
+            binary_archive<false> ar(iss);
+            ar.enable_varint_bug_backward_compatibility();
+            if (::serialization::serialize(ar, *this))
+              if (::serialization::check_stream_state(ar))
+                loaded = true;
+          }
+        }
+        catch(...) { }
+
+        if (!loaded)
+        {
+          std::stringstream iss;
+          iss << cache_data;
+          boost::archive::portable_binary_iarchive ar(iss);
+          ar >> *this;
+        }
       }
       catch(...)
       {
@@ -5249,7 +5282,8 @@ std::string wallet2::path() const
 //----------------------------------------------------------------------------------------------------
 void wallet2::store()
 {
-  store_to("", epee::wipeable_string());
+  if (!m_wallet_file.empty())
+    store_to("", epee::wipeable_string());
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::store_to(const std::string &path, const epee::wipeable_string &password)
@@ -5357,8 +5391,9 @@ boost::optional<wallet2::cache_file_data> wallet2::get_cache_file_data(const epe
   try
   {
     std::stringstream oss;
-    boost::archive::portable_binary_oarchive ar(oss);
-    ar << *this;
+    binary_archive<true> ar(oss);
+    if (!::serialization::serialize(ar, *this))
+      return boost::none;
 
     boost::optional<wallet2::cache_file_data> cache_file_data = (wallet2::cache_file_data) {};
     cache_file_data.get().cache_data = oss.str();
@@ -6356,10 +6391,11 @@ std::string wallet2::dump_tx_to_str(const std::vector<pending_tx> &ptx_vector) c
   txs.transfers = export_outputs();
   // save as binary
   std::ostringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
+  binary_archive<true> ar(oss);
   try
   {
-    ar << txs;
+    if (!::serialization::serialize(ar, txs))
+      return std::string();
   }
   catch (...)
   {
@@ -6403,6 +6439,11 @@ bool wallet2::parse_unsigned_tx_from_str(const std::string &unsigned_tx_st, unsi
   s = s.substr(1);
   if (version == '\003')
   {
+    if (!m_load_deprecated_formats)
+    {
+      LOG_PRINT_L0("Not loading deprecated format");
+      return false;
+    }
     try
     {
       std::istringstream iss(s);
@@ -6417,6 +6458,11 @@ bool wallet2::parse_unsigned_tx_from_str(const std::string &unsigned_tx_st, unsi
   }
   else if (version == '\004')
   {
+    if (!m_load_deprecated_formats)
+    {
+      LOG_PRINT_L0("Not loading deprecated format");
+      return false;
+    }
     try
     {
       s = decrypt_with_view_secret_key(s);
@@ -6435,6 +6481,26 @@ bool wallet2::parse_unsigned_tx_from_str(const std::string &unsigned_tx_st, unsi
     catch (const std::exception& e)
     {
       LOG_PRINT_L0("Failed to decrypt unsigned tx: " << e.what());
+      return false;
+    }
+  }
+  else if (version == '\005')
+  {
+    try { s = decrypt_with_view_secret_key(s); }
+    catch(const std::exception &e) { LOG_PRINT_L0("Failed to decrypt unsigned tx: " << e.what()); return false; }
+    try
+    {
+      std::istringstream iss(s);
+      binary_archive<false> ar(iss);
+      if (!::serialization::serialize(ar, exported_txs))
+      {
+        LOG_PRINT_L0("Failed to parse data from unsigned tx");
+        return false;
+      }
+    }
+    catch (...)
+    {
+      LOG_PRINT_L0("Failed to parse data from unsigned tx");
       return false;
     }
   }
@@ -6582,12 +6648,13 @@ std::string wallet2::sign_tx_dump_to_str(unsigned_tx_set &exported_txs, std::vec
     return std::string();
   }
 
-   // save as binary
+  // save as binary
   std::ostringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
+  binary_archive<true> ar(oss);
   try
   {
-    ar << signed_txes;
+    if (!::serialization::serialize(ar, signed_txes))
+      return std::string();
   }
   catch(...)
   {
@@ -6635,6 +6702,11 @@ bool wallet2::parse_tx_from_str(const std::string &signed_tx_st, std::vector<too
   s = s.substr(1);
   if (version == '\003')
   {
+    if (!m_load_deprecated_formats)
+    {
+      LOG_PRINT_L0("Not loading deprecated format");
+      return false;
+    }
     try
     {
       std::istringstream iss(s);
@@ -6649,6 +6721,11 @@ bool wallet2::parse_tx_from_str(const std::string &signed_tx_st, std::vector<too
   }
   else if (version == '\004')
   {
+    if (!m_load_deprecated_formats)
+    {
+      LOG_PRINT_L0("Not loading deprecated format");
+      return false;
+    }
     try
     {
       s = decrypt_with_view_secret_key(s);
@@ -6665,6 +6742,26 @@ bool wallet2::parse_tx_from_str(const std::string &signed_tx_st, std::vector<too
       }
     }
     catch (const std::exception& e)
+    {
+      LOG_PRINT_L0("Failed to decrypt signed transaction: " << e.what());
+      return false;
+    }
+  }
+  else if (version == '\005')
+  {
+    try { s = decrypt_with_view_secret_key(s); }
+    catch (const std::exception &e) { LOG_PRINT_L0("Failed to decrypt signed transaction: " << e.what()); return false; }
+    try
+    {
+      std::istringstream iss(s);
+      binary_archive<false> ar(iss);
+      if (!::serialization::serialize(ar, signed_txs))
+      {
+        LOG_PRINT_L0("Failed to deserialize signed transaction");
+        return false;
+      }
+    }
+    catch (const std::exception &e)
     {
       LOG_PRINT_L0("Failed to decrypt signed transaction: " << e.what());
       return false;
@@ -6731,10 +6828,11 @@ std::string wallet2::save_multisig_tx(multisig_tx_set txs)
 
   // save as binary
   std::ostringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
+  binary_archive<true> ar(oss);
   try
   {
-    ar << txs;
+    if (!::serialization::serialize(ar, txs))
+      return std::string();
   }
   catch (...)
   {
@@ -6798,13 +6896,29 @@ bool wallet2::parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx
     LOG_PRINT_L0("Failed to decrypt multisig tx data: " << e.what());
     return false;
   }
+  bool loaded = false;
   try
   {
     std::istringstream iss(multisig_tx_st);
-    boost::archive::portable_binary_iarchive ar(iss);
-    ar >> exported_txs;
+    binary_archive<false> ar(iss);
+    if (::serialization::serialize(ar, exported_txs))
+      if (::serialization::check_stream_state(ar))
+        loaded = true;
   }
-  catch (...)
+  catch (...) { }
+  try
+  {
+    if (!loaded && m_load_deprecated_formats)
+    {
+      std::istringstream iss(multisig_tx_st);
+      boost::archive::portable_binary_iarchive ar(iss);
+      ar >> exported_txs;
+      loaded = true;
+    }
+  }
+  catch(...) { }
+
+  if (!loaded)
   {
     LOG_PRINT_L0("Failed to parse multisig tx data");
     return false;
@@ -11139,7 +11253,7 @@ std::string wallet2::get_reserve_proof(const boost::optional<std::pair<uint32_t,
   }
 
   // collect all subaddress spend keys that received those outputs and generate their signatures
-  std::unordered_map<crypto::public_key, crypto::signature> subaddr_spendkeys;
+  serializable_unordered_map<crypto::public_key, crypto::signature> subaddr_spendkeys;
   for (const cryptonote::subaddress_index &index : subaddr_indices)
   {
     crypto::secret_key subaddr_spend_skey = m_account.get_keys().m_spend_secret_key;
@@ -11156,8 +11270,9 @@ std::string wallet2::get_reserve_proof(const boost::optional<std::pair<uint32_t,
 
   // serialize & encode
   std::ostringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
-  ar << proofs << subaddr_spendkeys;
+  binary_archive<true> ar(oss);
+  THROW_WALLET_EXCEPTION_IF(!::serialization::serialize(ar, proofs), error::wallet_internal_error, "Failed to serialize proof");
+  THROW_WALLET_EXCEPTION_IF(!::serialization::serialize(ar, subaddr_spendkeys), error::wallet_internal_error, "Failed to serialize proof");
   return "ReserveProofV1" + tools::base58::encode(oss.str());
 }
 
@@ -11175,11 +11290,25 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
   THROW_WALLET_EXCEPTION_IF(!tools::base58::decode(sig_str.substr(header.size()), sig_decoded), error::wallet_internal_error,
     "Signature decoding error");
 
-  std::istringstream iss(sig_decoded);
-  boost::archive::portable_binary_iarchive ar(iss);
+  bool loaded = false;
   std::vector<reserve_proof_entry> proofs;
-  std::unordered_map<crypto::public_key, crypto::signature> subaddr_spendkeys;
-  ar >> proofs >> subaddr_spendkeys;
+  serializable_unordered_map<crypto::public_key, crypto::signature> subaddr_spendkeys;
+  try
+  {
+    std::istringstream iss(sig_decoded);
+    binary_archive<false> ar(iss);
+    if (::serialization::serialize_noeof(ar, proofs))
+      if (::serialization::serialize_noeof(ar, subaddr_spendkeys))
+        if (::serialization::check_stream_state(ar))
+          loaded = true;
+  }
+  catch(...) { }
+  if (!loaded && m_load_deprecated_formats)
+  {
+    std::istringstream iss(sig_decoded);
+    boost::archive::portable_binary_iarchive ar(iss);
+    ar >> proofs >> subaddr_spendkeys.parent();
+  }
 
   THROW_WALLET_EXCEPTION_IF(subaddr_spendkeys.count(address.m_spend_public_key) == 0, error::wallet_internal_error,
     "The given address isn't found in the proof");
@@ -11401,7 +11530,7 @@ std::string wallet2::get_description() const
   return get_attribute(ATTRIBUTE_DESCRIPTION);
 }
 
-const std::pair<std::map<std::string, std::string>, std::vector<std::string>>& wallet2::get_account_tags()
+const std::pair<serializable_map<std::string, std::string>, std::vector<std::string>>& wallet2::get_account_tags()
 {
   // ensure consistency
   if (m_account_tags.second.size() != get_num_subaddress_accounts())
@@ -11580,7 +11709,7 @@ crypto::public_key wallet2::get_tx_pub_key_from_received_outs(const tools::walle
 bool wallet2::export_key_images(const std::string &filename) const
 {
   PERF_TIMER(export_key_images);
-  std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = export_key_images();
+  std::pair<uint64_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = export_key_images();
   std::string magic(KEY_IMAGE_EXPORT_FILE_MAGIC, strlen(KEY_IMAGE_EXPORT_FILE_MAGIC));
   const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
   const uint32_t offset = ski.first;
@@ -11606,7 +11735,7 @@ bool wallet2::export_key_images(const std::string &filename) const
   return save_to_file(filename, magic + ciphertext);
 }
 //----------------------------------------------------------------------------------------------------
-std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> wallet2::export_key_images(bool all) const
+std::pair<uint64_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> wallet2::export_key_images(bool all) const
 {
   PERF_TIMER(export_key_images_raw);
   std::vector<std::pair<crypto::key_image, crypto::signature>> ski;
@@ -12047,14 +12176,15 @@ void wallet2::import_blockchain(const std::tuple<size_t, crypto::hash, std::vect
   m_last_block_reward = cryptonote::get_outs_money_amount(genesis.miner_tx);
 }
 //----------------------------------------------------------------------------------------------------
-std::pair<size_t, std::vector<tools::wallet2::transfer_details>> wallet2::export_outputs() const
+std::pair<uint64_t, std::vector<tools::wallet2::transfer_details>> wallet2::export_outputs(bool all) const
 {
   PERF_TIMER(export_outputs);
   std::vector<tools::wallet2::transfer_details> outs;
 
   size_t offset = 0;
-  while(offset < m_transfers.size() && m_transfers[offset].m_key_image_known)
-    ++offset;
+  if (!all)
+    while(offset < m_transfers.size() && m_transfers[offset].m_key_image_known)
+      ++offset;
 
   outs.reserve(m_transfers.size() - offset);
   for(size_t n = offset; n < m_transfers.size(); ++n)
@@ -12067,13 +12197,14 @@ std::pair<size_t, std::vector<tools::wallet2::transfer_details>> wallet2::export
   return std::make_pair(offset, outs);
 }
 //----------------------------------------------------------------------------------------------------
-std::string wallet2::export_outputs_to_str() const
+std::string wallet2::export_outputs_to_str(bool all) const
 {
   PERF_TIMER(export_outputs_to_str);
 
   std::stringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
-  ar << export_outputs();
+  binary_archive<true> ar(oss);
+  auto outputs = export_outputs(all);
+  THROW_WALLET_EXCEPTION_IF(!::serialization::serialize(ar, outputs), error::wallet_internal_error, "Failed to serialize output data");
 
   std::string magic(OUTPUT_EXPORT_FILE_MAGIC, strlen(OUTPUT_EXPORT_FILE_MAGIC));
   const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
@@ -12085,7 +12216,7 @@ std::string wallet2::export_outputs_to_str() const
   return magic + ciphertext;
 }
 //----------------------------------------------------------------------------------------------------
-size_t wallet2::import_outputs(const std::pair<size_t, std::vector<tools::wallet2::transfer_details>> &outputs)
+size_t wallet2::import_outputs(const std::pair<uint64_t, std::vector<tools::wallet2::transfer_details>> &outputs)
 {
   PERF_TIMER(import_outputs);
 
@@ -12187,23 +12318,39 @@ size_t wallet2::import_outputs_from_str(const std::string &outputs_st)
   }
 
   size_t imported_outputs = 0;
+  bool loaded = false;
   try
   {
     std::string body(data, headerlen);
-    std::stringstream iss;
-    iss << body;
-    std::pair<size_t, std::vector<tools::wallet2::transfer_details>> outputs;
+    std::pair<uint64_t, std::vector<tools::wallet2::transfer_details>> outputs;
     try
     {
-      boost::archive::portable_binary_iarchive ar(iss);
-      ar >> outputs;
-    }
-    catch (...)
-    {
-      iss.str("");
+      std::stringstream iss;
       iss << body;
-      boost::archive::binary_iarchive ar(iss);
-      ar >> outputs;
+      binary_archive<false> ar(iss);
+      if (::serialization::serialize(ar, outputs))
+        if (::serialization::check_stream_state(ar))
+          loaded = true;
+    }
+    catch (...) { }
+
+    if (!loaded && m_load_deprecated_formats)
+    {
+      try
+      {
+        std::stringstream iss;
+        iss << body;
+        boost::archive::portable_binary_iarchive ar(iss);
+        ar >> outputs;
+        loaded = true;
+      }
+      catch (...) {}
+    }
+
+    if (!loaded)
+    {
+      outputs.first = 0;
+      outputs.second = {};
     }
 
     imported_outputs = import_outputs(outputs);
@@ -12360,8 +12507,8 @@ std::string wallet2::export_multisig()
   }
 
   std::stringstream oss;
-  boost::archive::portable_binary_oarchive ar(oss);
-  ar << info;
+  binary_archive<true> ar(oss);
+  CHECK_AND_ASSERT_THROW_MES(::serialization::serialize(ar, info), "Failed to serialize multisig data");
 
   const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
   std::string header;
@@ -12431,10 +12578,26 @@ size_t wallet2::import_multisig(std::vector<std::string> blobs)
     seen.insert(signer);
 
     std::string body(data, headerlen);
-    std::istringstream iss(body);
     std::vector<tools::wallet2::multisig_info> i;
-    boost::archive::portable_binary_iarchive ar(iss);
-    ar >> i;
+
+    bool loaded = false;
+    try
+    {
+      std::istringstream iss(body);
+      binary_archive<false> ar(iss);
+      if (::serialization::serialize(ar, i))
+        if (::serialization::check_stream_state(ar))
+          loaded = true;
+    }
+    catch(...) {}
+    if (!loaded && m_load_deprecated_formats)
+    {
+      std::istringstream iss(body);
+      boost::archive::portable_binary_iarchive ar(iss);
+      ar >> i;
+      loaded = true;
+    }
+    CHECK_AND_ASSERT_THROW_MES(loaded, "Failed to load output data");
     MINFO(boost::format("%u outputs found") % boost::lexical_cast<std::string>(i.size()));
     info.push_back(std::move(i));
   }
