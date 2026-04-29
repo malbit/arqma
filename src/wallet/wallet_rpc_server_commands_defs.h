@@ -1973,10 +1973,12 @@ namespace wallet_rpc
     {
       std::string filename;
       std::string password;
+      bool autosave_current;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(filename)
         KV_SERIALIZE(password)
+        KV_SERIALIZE_OPT(autosave_current, true)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -1993,7 +1995,10 @@ namespace wallet_rpc
   {
     struct request_t
     {
+      bool autosave_current;
+
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(autosave_current, true)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
