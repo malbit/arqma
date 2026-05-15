@@ -1744,7 +1744,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     }
 
     tx_pub_key = pub_key_field.pub_key;
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     const cryptonote::account_keys& keys = m_account.get_keys();
     crypto::key_derivation derivation;
@@ -1805,7 +1805,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
       continue;
     }
 
-    if((tx.vout.size() > 1 && tools::threadpool::getInstanceForCompute().get_max_concurrency() > 1 && !is_out_data_ptr) ||
+    if((tx.vout.size() > 1 && tools::threadpool::getInstance().get_max_concurrency() > 1 && !is_out_data_ptr) ||
        (miner_tx && m_refresh_type == RefreshOptimizeCoinbase))
     {
       for(size_t i = 0; i < tx.vout.size(); ++i)
@@ -2401,7 +2401,7 @@ void wallet2::parse_block_round(const std::string &blob, cryptonote::block &bl, 
     bl_id = get_block_hash(bl);
 }
 //----------------------------------------------------------------------------------------------------
-void wallet2::pull_blocks(uint64_t start_height, uint64_t &blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::block_output_indices> &o_indices)
+void wallet2::pull_blocks(uint64_t start_height, uint64_t &blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::block_output_indices> &o_indices, uint64_t &current_height)
 {
   cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::request req{};
   cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::response res{};
@@ -2423,6 +2423,7 @@ void wallet2::pull_blocks(uint64_t start_height, uint64_t &blocks_start_height, 
   blocks_start_height = res.start_height;
   blocks = std::move(res.blocks);
   o_indices = std::move(res.output_indices);
+  current_height = res.current_height;
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::pull_hashes(uint64_t start_height, uint64_t &blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<crypto::hash> &hashes)
@@ -2451,7 +2452,7 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
   THROW_WALLET_EXCEPTION_IF(blocks.size() != parsed_blocks.size(), error::wallet_internal_error, "size mismatch");
   THROW_WALLET_EXCEPTION_IF(!m_blockchain.is_in_bounds(current_index), error::out_of_hashchain_bounds_error);
 
-  tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+  tools::threadpool& tpool = tools::threadpool::getInstance();
   tools::threadpool::waiter waiter(tpool);
 
   size_t num_txes = 0;
@@ -2585,9 +2586,10 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
   refresh(trusted_daemon, start_height, blocks_fetched, received_money);
 }
 //----------------------------------------------------------------------------------------------------
-void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history, const std::vector<cryptonote::block_complete_entry> &prev_blocks, const std::vector<parsed_block> &prev_parsed_blocks, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<parsed_block> &parsed_blocks, bool &error)
+void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history, const std::vector<cryptonote::block_complete_entry> &prev_blocks, const std::vector<parsed_block> &prev_parsed_blocks, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<parsed_block> &parsed_blocks, bool &last, bool &error)
 {
   error = false;
+  last = false;
 
   try
   {
@@ -2604,10 +2606,11 @@ void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks
 
     // pull the new blocks
     std::vector<cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::block_output_indices> o_indices;
-    pull_blocks(start_height, blocks_start_height, short_chain_history, blocks, o_indices);
+    uint64_t current_height;
+    pull_blocks(start_height, blocks_start_height, short_chain_history, blocks, o_indices, current_height);
     THROW_WALLET_EXCEPTION_IF(blocks.size() != o_indices.size(), error::wallet_internal_error, "Mismatched sizes of blocks and o_indices");
 
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     parsed_blocks.resize(blocks.size());
     for (size_t i = 0; i < blocks.size(); ++i)
@@ -2641,6 +2644,7 @@ void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks
       }
     }
     THROW_WALLET_EXCEPTION_IF(!waiter.wait(), error::wallet_internal_error, "Exception in thread pool");
+    last = !blocks.empty() && cryptonote::get_block_height(parsed_blocks.back().block) + 1 == current_height;
   }
   catch(...)
   {
@@ -3001,7 +3005,7 @@ bool wallet2::delete_address_book_row(std::size_t row_id) {
 }
 
 //----------------------------------------------------------------------------------------------------
-void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money)
+void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money, uint64_t max_blocks)
 {
   if(m_offline)
   {
@@ -3025,7 +3029,7 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
   size_t try_count = 0;
   crypto::hash last_tx_hash_id = m_transfers.size() ? m_transfers.back().m_txid : null_hash;
   std::list<crypto::hash> short_chain_history;
-  tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+  tools::threadpool& tpool = tools::threadpool::getInstance();
   tools::threadpool::waiter waiter(tpool);
   uint64_t blocks_start_height;
   std::vector<cryptonote::block_complete_entry> blocks;
@@ -3058,8 +3062,8 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
     m_encrypt_keys_after_refresh.reset();
   });
 
-  bool first = true;
-  while(m_run.load(std::memory_order_relaxed))
+  bool first = true, last = false;
+  while(m_run.load(std::memory_order_relaxed) && blocks_fetched < max_blocks)
   {
     uint64_t next_blocks_start_height;
     std::vector<cryptonote::block_complete_entry> next_blocks;
@@ -3073,10 +3077,12 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
       added_blocks = 0;
       if (!first && blocks.empty())
       {
+        m_node_rpc_proxy.set_height(m_blockchain.size());
         refreshed = false;
         break;
       }
-      tpool.submit(&waiter, [&]{pull_and_parse_next_blocks(start_height, next_blocks_start_height, short_chain_history, blocks, parsed_blocks, next_blocks, next_parsed_blocks, error);});
+      if (!last)
+        tpool.submit(&waiter, [&]{pull_and_parse_next_blocks(start_height, next_blocks_start_height, short_chain_history, blocks, parsed_blocks, next_blocks, next_parsed_blocks, last, error);});
 
       if (!first)
       {
@@ -3350,7 +3356,7 @@ void wallet2::detach_blockchain(uint64_t height)
 //----------------------------------------------------------------------------------------------------
 bool wallet2::deinit()
 {
-  m_is_initialized=false;
+  m_is_initialized = false;
   unlock_keys_file();
   return true;
 }
@@ -5282,8 +5288,7 @@ std::string wallet2::path() const
 //----------------------------------------------------------------------------------------------------
 void wallet2::store()
 {
-  if (!m_wallet_file.empty())
-    store_to("", epee::wipeable_string());
+  store_to("", epee::wipeable_string());
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::store_to(const std::string &path, const epee::wipeable_string &password)
